@@ -130,32 +130,12 @@ def compras(request):
     })
 
 def ver_pdf(request, req_id):
-    # Verificar que el usuario está autenticado
-    if not request.session.get('user_com_id'):
-        raise Http404("Acceso no autorizado")
-    
-    try:
-        req = Requisicion.objects.get(id=req_id, usuario__id=request.session.get('user_com_id'))
-    except Requisicion.DoesNotExist:
-        raise Http404("Requisición no encontrada")
-    
-    # Verificar que el archivo es PDF
-    if not req.archivo.name.lower().endswith('.pdf'):
-        return HttpResponse("El archivo no es un PDF válido", status=400)
-    
-    # Ruta completa al archivo
+    req = get_object_or_404(Requisicion, id=req_id, usuario__id=request.session.get('user_com_id'))
     file_path = os.path.join(settings.MEDIA_ROOT, req.archivo.name)
     
-    # Verificar que el archivo existe
-    if not os.path.exists(file_path):
-        raise Http404("El archivo PDF no se encontró")
-    
-    # Abrir y servir el archivo
-    try:
+    if os.path.exists(file_path):
         return FileResponse(open(file_path, 'rb'), content_type='application/pdf')
-    except IOError:
-        raise Http404("Error al leer el archivo PDF")
-
+    raise Http404("El archivo no existe")
 
 def logout(request):
     request.session.flush()  # Eliminar todas las sesiones
