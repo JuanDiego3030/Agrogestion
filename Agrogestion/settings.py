@@ -26,7 +26,7 @@ SECRET_KEY = 'django-insecure-a)0o(9u)1g8pj4zvs2vlkj*6vr^)lot@s17y8g!po&!19rl6e5
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
@@ -77,7 +77,7 @@ WSGI_APPLICATION = 'Agrogestion.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'NAME': BASE_DIR / 'agrogestion.sqlite3',
     }
 }
 
@@ -132,9 +132,16 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-SESSION_COOKIE_AGE = 120  # 30 segundos de inactividad
+SESSION_COOKIE_AGE = 3600  # 30 segundos de inactividad
 SESSION_SAVE_EVERY_REQUEST = True  # Renovar el tiempo con cada acción
 
 # Archivos media
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'  # Cambia esto si usas otro proveedor
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'juanxcosa@gmail.com'  # Tu correo electrónico
+EMAIL_HOST_PASSWORD = 'ykln ddza qdel qfjf'  # Tu contraseña de correo

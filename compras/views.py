@@ -2,15 +2,14 @@ from django.views.decorators.cache import never_cache
 from django.contrib.auth.hashers import check_password
 from django.contrib import messages
 from django.shortcuts import render, redirect
-from .models import User_com, Requisicion
-from django.core.files.storage import FileSystemStorage
-from django.http import HttpResponse
+from .models import User_com, Requisicion, OrdenCompra
 from django.shortcuts import get_object_or_404
-from django.http import HttpResponse, Http404
+from django.http import  Http404
 import os
 from django.http import FileResponse, Http404
 from django.conf import settings
-import os
+from .compras import RequisicionService, OrdenCompraService
+from datetime import datetime
 
 def compras_login(request):
     if request.method == 'POST':
@@ -46,7 +45,6 @@ def compras_login(request):
     
     return render(request, 'compras_login.html')
 
-
 @never_cache
 def compras(request):
     # Verificar sesión
@@ -60,77 +58,53 @@ def compras(request):
     except User_com.DoesNotExist:
         messages.error(request, 'Usuario no encontrado')
         return redirect('compras_login')
-    
-    # Manejar visualización de PDF
-    if 'ver_pdf' in request.GET:
-        req_id = request.GET.get('ver_pdf')
-        try:
-            req = Requisicion.objects.get(id=req_id, usuario=user)
-            if not req.archivo.name.endswith('.pdf'):
-                raise Http404("Solo se pueden visualizar archivos PDF")
-            
-            with open(req.archivo.path, 'rb') as fh:
-                response = HttpResponse(fh.read(), content_type='application/pdf')
-                response['Content-Disposition'] = f'inline; filename="{os.path.basename(req.archivo.name)}"'
-                return response
-        except Requisicion.DoesNotExist:
-            raise Http404("Requisición no encontrada")
-    
-    # Procesar acciones CRUD
-    if request.method == 'POST':
-        # Nueva requisición
-        if 'archivo' in request.FILES:
-            archivo = request.FILES['archivo']
-            if not archivo.name.endswith('.pdf'):
-                messages.error(request, 'Solo se aceptan archivos PDF')
-            else:
-                try:
-                    # Crear la requisición (el código se genera automáticamente en save())
-                    requisicion = Requisicion(
-                        archivo=archivo,
-                        usuario=user
-                    )
-                    requisicion.save()
-                    messages.success(request, 'Requisición creada exitosamente!')
-                except Exception as e:
-                    messages.error(request, f'Error al crear requisición: {str(e)}')
-            return redirect('compras')
         
-        # Editar o eliminar
-        req_id = request.POST.get('req_id')
+    if request.method == 'POST':
         accion = request.POST.get('accion')
         
-        try:
-            req = Requisicion.objects.get(id=req_id, usuario=user)
-            
-            if accion == 'cambiar_estado':
-                nuevo_estado = request.POST.get('nuevo_estado')
-                if nuevo_estado in dict(Requisicion.ESTADOS):
-                    req.estado = nuevo_estado
-                    req.save()
-                    messages.success(request, 'Estado actualizado!')
-            
-            elif accion == 'eliminar':
-                req.delete()
-                messages.success(request, 'Requisición eliminada!')
-                
-        except Requisicion.DoesNotExist:
-            messages.error(request, 'Requisición no encontrada')
-        except Exception as e:
-            messages.error(request, f'Error al procesar la acción: {str(e)}')
+        # Manejo de requisiciones
+        if accion == 'crear':
+            if RequisicionService.crear_requisicion(request, user):
+                return redirect('compras')
+        
+        elif accion == 'editar':
+            if RequisicionService.editar_requisicion(request, user):
+                return redirect('compras')
+        
+        elif accion == 'eliminar':
+            if RequisicionService.eliminar_requisicion(request, user):
+                return redirect('compras')
+        
+        # Manejo de órdenes de compra
+        elif accion == 'crear_orden':
+            if OrdenCompraService.crear_orden(request, user):
+                return redirect('compras')
+        
+        elif accion == 'editar_orden':
+            if OrdenCompraService.editar_orden(request, user):
+                return redirect('compras')
+        
+        elif accion == 'eliminar_orden':
+            if OrdenCompraService.eliminar_orden(request, user):
+                return redirect('compras')
         
         return redirect('compras')
     
-    # Obtener requisiciones del usuario
-    requisiciones = Requisicion.objects.filter(usuario=user).order_by('-fecha_registro')
+    # Obtener datos para ambas secciones
+    requisiciones = Requisicion.objects.all().order_by('-fecha_registro')
+    ordenes_compra = OrdenCompra.objects.all().order_by('-fecha_creacion')
+
     return render(request, 'compras.html', {
         'user': user,
         'requisiciones': requisiciones,
-        'estados': Requisicion.ESTADOS
+        'ordenes_compra': ordenes_compra,
+        'estados': Requisicion.ESTADOS,
+        'estados_orden': OrdenCompra.ESTADOS,
+        'fecha_minima': datetime.now().strftime('%Y-%m-%d')
     })
 
 def ver_pdf(request, req_id):
-    req = get_object_or_404(Requisicion, id=req_id, usuario__id=request.session.get('user_com_id'))
+    req = get_object_or_404(Requisicion, id=req_id)
     file_path = os.path.join(settings.MEDIA_ROOT, req.archivo.name)
     
     if os.path.exists(file_path):

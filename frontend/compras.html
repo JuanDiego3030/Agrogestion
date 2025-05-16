@@ -7,27 +7,7 @@
     <title>Sistema de Compras</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
-        .file-icon {
-            font-size: 1.5rem;
-            color: #6c757d;
-            transition: all 0.2s;
-            cursor: pointer;
-        }
-        .file-icon:hover {
-            color: #dc3545;
-            transform: scale(1.1);
-        }
-        .modal-xl {
-            max-width: 90%;
-        }
-        #pdfViewer {
-            width: 100%;
-            height: 70vh;
-            border: 1px solid #dee2e6;
-            border-radius: 0.25rem;
-        }
-    </style>
+    <link rel="stylesheet" href="{% static 'css/paneles-style.css' %}">
 </head>
 <body>
     <div class="d-flex" style="min-height: 100vh;">
@@ -38,8 +18,11 @@
                 <h5>Compras - {{ user.nombre }}</h5>
             </div>
             <div class="list-group list-group-flush">
-                <a href="#" class="list-group-item list-group-item-action bg-dark text-white active">
+                <a href="#" class="list-group-item list-group-item-action bg-dark text-white section-link active" data-section="requisiciones">
                     <i class="fas fa-file-invoice me-2"></i>Requisiciones
+                </a>
+                <a href="#" class="list-group-item list-group-item-action bg-dark text-white section-link" data-section="ordenes">
+                    <i class="fas fa-file-purchase-order me-2"></i>Órdenes de compra
                 </a>
                 <a href="{% url 'logout' %}" class="list-group-item list-group-item-action bg-dark text-white">
                     <i class="fas fa-power-off me-2"></i>Cerrar Sesión
@@ -49,111 +32,233 @@
 
         <!-- Contenido Principal -->
         <div class="flex-grow-1 p-4">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2><i class="fas fa-file-invoice me-2"></i>Mis Requisiciones</h2>
-                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#nuevaReqModal">
-                    <i class="fas fa-plus me-1"></i> Nueva
-                </button>
+            <!-- Sección de Requisiciones (visible por defecto) -->
+            <div id="requisiciones-section" class="section-content">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2><i class="fas fa-file-invoice me-2"></i>Mis Requisiciones</h2>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#nuevaReqModal">
+                        <i class="fas fa-plus me-1"></i> Nueva
+                    </button>
+                </div>
+
+                {% if messages %}
+                    {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+
+                <!-- Tabla de Requisiciones -->
+                <div class="card">
+                    <div class="card-body">
+                        {% if requisiciones %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Código</th>
+                                        <th>Usuario</th>
+                                        <th>Descripción</th>
+                                        <th>Requisición</th>
+                                        <th>Aprobación</th>
+                                        <th>Fecha Registro</th>
+                                        <th>Fecha Requerida</th>
+                                        <th>Estado</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for req in requisiciones %}
+                                    <tr>
+                                        <td>{{ req.codigo }}</td>
+                                        <td>{{ req.usuario.nombre }}</td>
+                                        <td>{{ req.descripcion|truncatechars:30 }}</td>
+                                        <td>
+                                            <a href="#" class="view-pdf" 
+                                               data-req-id="{{ req.id }}"
+                                               data-filepath="{{ req.archivo.name }}"
+                                               title="Ver {{ req.archivo.name|slice:'13:' }}">
+                                                <i class="fas fa-file-pdf file-icon"></i>
+                                            </a>
+                                        </td>
+                                        <td>
+                                            {% if req.archivo_aprobacion %}
+                                                <a href="#" class="view-aprobacion" 
+                                                   data-req-id="{{ req.id }}"
+                                                   data-filepath="{{ req.archivo_aprobacion.name }}"
+                                                   title="Ver {{ req.archivo_aprobacion.name|slice:'13:' }}">
+                                                    <i class="fas fa-file-pdf file-icon"></i>
+                                                </a>
+                                            {% else %}
+                                                <span class="text-muted">Sin aprobación</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ req.fecha_registro|date:"d/m/Y" }}</td>
+                                        <td>{{ req.fecha_requerida|date:"d/m/Y" }}</td>
+                                        <td>
+                                            <span class="badge 
+                                                {% if req.estado == 'P' %}bg-warning
+                                                {% elif req.estado == 'A' %}bg-success
+                                                {% else %}bg-danger{% endif %}">
+                                                {{ req.get_estado_display }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-primary" 
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#editarReqModal{{ req.id }}">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger" 
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#eliminarReqModal{{ req.id }}">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>        
+                            </table>
+                        </div>
+                        {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-inbox fs-1 text-muted mb-3"></i>
+                            <p class="text-muted">No tienes requisiciones registradas</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
             </div>
 
-            {% if messages %}
-                {% for message in messages %}
-                <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <!-- Sección de Órdenes de Compra (oculta inicialmente) -->
+            <div id="ordenes-section" class="section-content" style="display: none;">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2><i class="fas fa-file-purchase-order me-2"></i>Órdenes de Compra</h2>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#nuevaOrdenModal">
+                        <i class="fas fa-plus me-1"></i> Nueva
+                    </button>
                 </div>
-                {% endfor %}
-            {% endif %}
 
-            <!-- Tabla de Requisiciones -->
-            <div class="card">
-                <div class="card-body">
-                    {% if requisiciones %}
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Archivo</th>
-                                    <th>Fecha</th>
-                                    <th>Estado</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for req in requisiciones %}
-                                <tr>
-                                    <td>{{ req.id }}</td>
-                                    <td>
-                                        <a href="#" class="view-pdf" 
-                                           data-req-id="{{ req.id }}"
-                                           data-filepath="{{ req.archivo.name }}"
-                                           title="Ver {{ req.archivo.name|slice:'13:' }}">
-                                            <i class="fas fa-file-pdf file-icon"></i>
-                                        </a>
-                                    </td>
-                                    <td>{{ req.fecha_registro|date:"d/m/Y" }}</td>
-                                    <td>
-                                        <span class="badge 
-                                            {% if req.estado == 'P' %}bg-warning
-                                            {% elif req.estado == 'A' %}bg-success
-                                            {% else %}bg-danger{% endif %}">
-                                            {{ req.get_estado_display }}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <button class="btn btn-sm btn-outline-primary" 
-                                                data-bs-toggle="modal" 
-                                                data-bs-target="#editarReqModal{{ req.id }}">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-danger" 
-                                                data-bs-toggle="modal" 
-                                                data-bs-target="#eliminarReqModal{{ req.id }}">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                    {% else %}
-                    <div class="text-center py-4">
-                        <i class="fas fa-inbox fs-1 text-muted mb-3"></i>
-                        <p class="text-muted">No tienes requisiciones registradas</p>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal Nueva Requisición -->
-    <div class="modal fade" id="nuevaReqModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <form method="post" enctype="multipart/form-data">
-                    {% csrf_token %}
-                    <div class="modal-header">
-                        <h5 class="modal-title">Nueva Requisición</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label">Selecciona archivo PDF:</label>
-                            <input type="file" name="archivo" class="form-control" accept=".pdf" required>
-                            <div class="form-text">Solo se aceptan archivos en formato PDF</div>
+                <!-- Tabla de Órdenes de Compra -->
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Código Orden</th>
+                                        <th>Requisición</th>
+                                        <th>Proveedor</th>
+                                        <th>Archivo</th>
+                                        <th>Fecha Creación</th>
+                                        <th>Fecha Entrega</th>
+                                        <th>Estado</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for orden in ordenes_compra %}
+                                    <tr>
+                                        <td>{{ orden.codigo }}</td>
+                                        <td>{{ orden.requisicion.codigo }}</td>
+                                        <td>{{ orden.proveedor }}</td>
+                                        <td>
+                                            <a href="#" class="view-pdf-orden" 
+                                               data-orden-id="{{ orden.id }}"
+                                               title="Ver {{ orden.archivo.name|slice:'15:' }}">
+                                                <i class="fas fa-file-pdf file-icon"></i>
+                                            </a>
+                                        </td>
+                                        <td>{{ orden.fecha_creacion|date:"d/m/Y" }}</td>
+                                        <td>{{ orden.fecha_entrega_esperada|date:"d/m/Y" }}</td>
+                                        <td>
+                                            <span class="badge 
+                                                {% if orden.estado == 'P' %}bg-warning
+                                                {% elif orden.estado == 'A' %}bg-success
+                                                {% elif orden.estado == 'E' %}bg-primary
+                                                {% elif orden.estado == 'R' %}bg-info
+                                                {% else %}bg-danger{% endif %}">
+                                                {{ orden.get_estado_display }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-primary" 
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#editarOrdenModal{{ orden.id }}">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger" 
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#eliminarOrdenModal{{ orden.id }}">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="8" class="text-center py-4">
+                                            <i class="fas fa-inbox fs-1 text-muted mb-3"></i>
+                                            <p class="text-muted">No hay órdenes de compra registradas</p>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-primary">Subir</button>
-                    </div>
-                </form>
+                </div>
             </div>
         </div>
     </div>
+
+<!-- Modal Nueva Requisición -->
+<div class="modal fade" id="nuevaReqModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" name="accion" value="crear">
+                <div class="modal-header">
+                    <h5 class="modal-title">Nueva Requisición</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Código de Requisición:</label>
+                        <input type="text" name="codigo" class="form-control" required
+                               placeholder="Ej: REQ-2023-001" pattern="[A-Za-z0-9-]+"
+                               title="Solo letras, números y guiones">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Fecha Requerida:</label>
+                        <input type="date" name="fecha_requerida" class="form-control" required min="{{ fecha_minima }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descripción:</label>
+                        <textarea name="descripcion" class="form-control" rows="3"
+                                  placeholder="Descripción de la requisición"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Archivo de Requisición (PDF):</label>
+                        <input type="file" name="archivo" class="form-control" accept=".pdf" required>
+                        <div class="form-text">Solo se aceptan archivos PDF (max. 5MB)</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Archivo de Aprobación (PDF - Opcional):</label>
+                        <input type="file" name="archivo_aprobacion" class="form-control" accept=".pdf">
+                        <div class="form-text">Subir solo si ya tiene aprobación</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
 <!-- Modal para Visualizar PDF -->
 <div class="modal fade" id="pdfModal" tabindex="-1" aria-hidden="true">
@@ -176,121 +281,368 @@
     </div>
 </div>
 
-    <!-- Modales para cada requisición -->
-    {% for req in requisiciones %}
-    <!-- Modal Editar Estado -->
-    <div class="modal fade" id="editarReqModal{{ req.id }}" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <form method="post">
-                    {% csrf_token %}
-                    <input type="hidden" name="req_id" value="{{ req.id }}">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Cambiar estado - Req-{{ req.id }}</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+<!-- Modales para cada requisición -->
+{% for req in requisiciones %}
+<!-- Modal Editar Requisición -->
+<div class="modal fade" id="editarReqModal{{ req.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" name="req_id" value="{{ req.id }}">
+                <input type="hidden" name="accion" value="editar">
+                <div class="modal-header">
+                    <h5 class="modal-title">Editar Requisición - {{ req.codigo }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Código:</label>
+                        <input type="text" name="codigo" class="form-control" 
+                               value="{{ req.codigo }}" required>
                     </div>
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label">Estado actual:</label>
-                            <select name="nuevo_estado" class="form-select">
-                                {% for codigo, nombre in estados %}
-                                <option value="{{ codigo }}" {% if req.estado == codigo %}selected{% endif %}>
+                    <div class="mb-3">
+                        <label class="form-label">Fecha Requerida:</label>
+                        <input type="date" name="fecha_requerida" class="form-control" 
+                               value="{{ req.fecha_requerida|date:'Y-m-d' }}" required min="{{ fecha_minima }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descripción:</label>
+                        <textarea name="descripcion" class="form-control" rows="3">{{ req.descripcion }}</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Actualizar Requisición (PDF):</label>
+                        <input type="file" name="archivo" class="form-control" accept=".pdf">
+                        <div class="form-text">
+                            Archivo actual: {{ req.archivo.name|slice:"13:" }}<br>
+                            Dejar en blanco para mantener el archivo actual
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Actualizar Aprobación (PDF):</label>
+                        <input type="file" name="archivo_aprobacion" class="form-control" accept=".pdf">
+                        <div class="form-text">
+                            {% if req.archivo_aprobacion %}
+                                Archivo actual: {{ req.archivo_aprobacion.name|slice:"13:" }}<br>
+                            {% else %}
+                                No se ha subido archivo de aprobación<br>
+                            {% endif %}
+                            Dejar en blanco para mantener el archivo actual
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Eliminar Requisición -->
+<div class="modal fade" id="eliminarReqModal{{ req.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="req_id" value="{{ req.id }}">
+                <input type="hidden" name="accion" value="eliminar">
+                <div class="modal-header">
+                    <h5 class="modal-title">Eliminar Requisición</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>¿Estás seguro de eliminar la requisición <strong>{{ req.codigo }}</strong>?</p>
+                    <p class="text-muted">Esta acción no se puede deshacer</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Confirmar Eliminación</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<!-- Modal Nueva Orden de Compra -->
+<div class="modal fade" id="nuevaOrdenModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" name="accion" value="crear_orden">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">Nueva Orden de Compra</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Código de Orden:</label>
+                            <input type="text" name="codigo_orden" class="form-control" required
+                                   placeholder="Ej: OC-2023-001">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Requisición Asociada:</label>
+                            <select name="requisicion_id" class="form-select" required>
+                                <option value="">Seleccione una requisición</option>
+                                {% for req in requisiciones %}
+                                <option value="{{ req.id }}">{{ req.codigo }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Proveedor:</label>
+                            <input type="text" name="proveedor" class="form-control" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Fecha Entrega Esperada:</label>
+                            <input type="date" name="fecha_entrega" class="form-control" required min="{{ fecha_minima }}">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descripción:</label>
+                        <textarea name="descripcion" class="form-control" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Archivo PDF:</label>
+                        <input type="file" name="archivo_orden" class="form-control" accept=".pdf" required>
+                        <div class="form-text">Solo se aceptan archivos PDF (max. 5MB)</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Orden</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modales para cada orden -->
+{% for orden in ordenes_compra %}
+<!-- Modal Editar Orden -->
+<div class="modal fade" id="editarOrdenModal{{ orden.id }}" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" name="orden_id" value="{{ orden.id }}">
+                <input type="hidden" name="accion" value="editar_orden">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">Editar Orden - {{ orden.codigo }}</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Código:</label>
+                            <input type="text" name="codigo" class="form-control" 
+                                   value="{{ orden.codigo }}" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Proveedor:</label>
+                            <input type="text" name="proveedor" class="form-control" 
+                                   value="{{ orden.proveedor }}" required>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Fecha Entrega:</label>
+                            <input type="date" name="fecha_entrega" class="form-control" 
+                                   value="{{ orden.fecha_entrega_esperada|date:'Y-m-d' }}" required min="{{ fecha_minima }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Estado:</label>
+                            <select name="estado" class="form-select">
+                                {% for codigo, nombre in estados_orden %}
+                                <option value="{{ codigo }}" {% if orden.estado == codigo %}selected{% endif %}>
                                     {{ nombre }}
                                 </option>
                                 {% endfor %}
                             </select>
                         </div>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" name="accion" value="cambiar_estado" class="btn btn-primary">
-                            Guardar Cambios
-                        </button>
+                    <div class="mb-3">
+                        <label class="form-label">Descripción:</label>
+                        <textarea name="descripcion" class="form-control" rows="3">{{ orden.descripcion }}</textarea>
                     </div>
-                </form>
-            </div>
+                    <div class="mb-3">
+                        <label class="form-label">Actualizar Archivo (opcional):</label>
+                        <input type="file" name="archivo_orden" class="form-control" accept=".pdf">
+                        <div class="form-text">
+                            Archivo actual: {{ orden.archivo.name|slice:"15:" }}
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                </div>
+            </form>
         </div>
     </div>
+</div>
 
-    <!-- Modal Eliminar -->
-    <div class="modal fade" id="eliminarReqModal{{ req.id }}" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <form method="post">
-                    {% csrf_token %}
-                    <input type="hidden" name="req_id" value="{{ req.id }}">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Eliminar Requisición</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <p>¿Estás seguro de eliminar la requisición #{{ req.id }}?</p>
-                        <p class="text-muted">Archivo: {{ req.archivo.name|slice:"13:" }}</p>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" name="accion" value="eliminar" class="btn btn-danger">
-                            Sí, Eliminar
-                        </button>
-                    </div>
-                </form>
-            </div>
+<!-- Modal Eliminar Orden -->
+<div class="modal fade" id="eliminarOrdenModal{{ orden.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="orden_id" value="{{ orden.id }}">
+                <input type="hidden" name="accion" value="eliminar_orden">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">Eliminar Orden</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>¿Estás seguro de eliminar la orden <strong>{{ orden.codigo }}</strong>?</p>
+                    <p class="text-muted">Esta acción no se puede deshacer</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Confirmar Eliminación</button>
+                </div>
+            </form>
         </div>
     </div>
-    {% endfor %}
+</div>
+{% endfor %}
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Manejar clic en iconos de PDF - Versión unificada
+        function initCompras() {
+            // Manejar clic en iconos de PDF de requisición
             document.querySelectorAll('.view-pdf').forEach(link => {
                 link.addEventListener('click', async function(e) {
                     e.preventDefault();
                     const reqId = this.getAttribute('data-req-id');
-                    const filePath = this.getAttribute('data-filepath');
+                    showPdfModal(reqId, 'requisicion');
+                });
+            });
+            
+            // Manejar clic en iconos de PDF de aprobación
+            document.querySelectorAll('.view-aprobacion').forEach(link => {
+                link.addEventListener('click', async function(e) {
+                    e.preventDefault();
+                    const reqId = this.getAttribute('data-req-id');
+                    showPdfModal(reqId, 'aprobacion');
+                });
+            });
+
+            // Manejar clic en iconos de PDF de órdenes
+            document.querySelectorAll('.view-pdf-orden').forEach(link => {
+                link.addEventListener('click', async function(e) {
+                    e.preventDefault();
+                    const ordenId = this.getAttribute('data-orden-id');
+                    showPdfModal(ordenId, 'orden');
+                });
+            });
+        }
+
+        async function showPdfModal(id, tipo) {
+            const pdfModal = new bootstrap.Modal(document.getElementById('pdfModal'));
+            const pdfViewer = document.getElementById('pdfViewer');
+            const pdfDownloadBtn = document.getElementById('pdfDownloadBtn');
+            const modalTitle = document.querySelector('#pdfModal .modal-title');
+            
+            try {
+                // Configurar título según el tipo
+                const titles = {
+                    'requisicion': 'Visualización de Requisición',
+                    'aprobacion': 'Visualización de Aprobación',
+                    'orden': 'Visualización de Orden de Compra'
+                };
+                modalTitle.textContent = titles[tipo] || 'Visualización de PDF';
+                
+                // Mostrar loader
+                pdfViewer.src = '';
+                pdfModal.show();
+                
+                // Cargar PDF
+                const response = await fetch(`/compras/ver-${tipo}/${id}/`);
+                
+                if (!response.ok) throw new Error('Error al cargar PDF');
+                
+                const blob = await response.blob();
+                const objectUrl = URL.createObjectURL(blob);
+                
+                // Configurar visor
+                pdfViewer.src = objectUrl;
+                pdfDownloadBtn.href = objectUrl;
+                pdfDownloadBtn.setAttribute('download', `${tipo}_${id}.pdf`);
+                
+                // Limpieza al cerrar
+                const cleanUp = () => {
+                    URL.revokeObjectURL(objectUrl);
+                    document.getElementById('pdfModal').removeEventListener('hidden.bs.modal', cleanUp);
+                };
+                
+                document.getElementById('pdfModal').addEventListener('hidden.bs.modal', cleanUp);
+                
+            } catch (error) {
+                console.error('Error:', error);
+                pdfModal.hide();
+                alert('No se pudo cargar el PDF: ' + error.message);
+            }
+        }
+
+        function initSectionSwitching() {
+            const sectionLinks = document.querySelectorAll('.section-link');
+            const sectionContents = document.querySelectorAll('.section-content');
+            const nuevoBtn = document.querySelector('.btn-primary[data-bs-target^="#nueva"]');
+            
+            sectionLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
                     
-                    // Inicializar el modal correctamente
-                    const pdfModal = new bootstrap.Modal(document.getElementById('pdfModal'));
+                    // Remover clase active de todos los links
+                    sectionLinks.forEach(l => l.classList.remove('active'));
                     
-                    try {
-                        // Mostrar el modal primero con un loader
-                        document.getElementById('pdfViewer').src = '';
-                        pdfModal.show();
-                        
-                        // Cargar el PDF
-                        const response = await fetch(`/compras/ver-pdf/${reqId}/`);
-                        
-                        if (!response.ok) throw new Error('Error al cargar PDF');
-                        
-                        const blob = await response.blob();
-                        const objectUrl = URL.createObjectURL(blob);
-                        
-                        // Configurar el visor
-                        document.getElementById('pdfViewer').src = objectUrl;
-                        document.getElementById('pdfDownloadBtn').href = objectUrl;
-                        
-                        // Manejar el cierre correctamente
-                        const modalElement = document.getElementById('pdfModal');
-                        const cleanUp = function() {
-                            URL.revokeObjectURL(objectUrl);
-                            modalElement.removeEventListener('hidden.bs.modal', cleanUp);
-                        };
-                        
-                        modalElement.addEventListener('hidden.bs.modal', cleanUp);
-                        
-                    } catch (error) {
-                        console.error('Error:', error);
-                        pdfModal.hide();
-                        
-                        // Mostrar mensaje de error
-                        const errorModal = new bootstrap.Modal(document.getElementById('errorModal'));
-                        document.getElementById('errorMessage').textContent = 'No se pudo cargar el PDF';
-                        errorModal.show();
+                    // Agregar clase active al link clickeado
+                    this.classList.add('active');
+                    
+                    // Ocultar todas las secciones
+                    sectionContents.forEach(section => {
+                        section.style.display = 'none';
+                    });
+                    
+                    // Mostrar la sección correspondiente
+                    const sectionId = this.getAttribute('data-section') + '-section';
+                    document.getElementById(sectionId).style.display = 'block';
+                    
+                    // Actualizar botón "Nueva" según la sección
+                    if (this.getAttribute('data-section') === 'requisiciones') {
+                        nuevoBtn.innerHTML = '<i class="fas fa-plus me-1"></i> Nueva Requisición';
+                        nuevoBtn.setAttribute('data-bs-target', '#nuevaReqModal');
+                    } else {
+                        nuevoBtn.innerHTML = '<i class="fas fa-plus me-1"></i> Nueva Orden';
+                        nuevoBtn.setAttribute('data-bs-target', '#nuevaOrdenModal');
                     }
                 });
             });
+            
+            // Activar la primera sección por defecto
+            if (sectionLinks.length > 0) {
+                sectionLinks[0].classList.add('active');
+                document.getElementById('requisiciones-section').style.display = 'block';
+                if (nuevoBtn) {
+                    nuevoBtn.innerHTML = '<i class="fas fa-plus me-1"></i> Nueva Requisición';
+                    nuevoBtn.setAttribute('data-bs-target', '#nuevaReqModal');
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initCompras();
+            initSectionSwitching();
         });
-        </script>
+    </script>
 </body>
 </html>

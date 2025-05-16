@@ -284,3 +284,22 @@
     background: #555;
   }
   
+        .file-icon {
+            font-size: 1.5rem;
+            color: #6c757d;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        .file-icon:hover {
+            color: #dc3545;
+            transform: scale(1.1);
+        }
+        .modal-xl {
+            max-width: 90%;
+        }
+        #pdfViewer {
+            width: 100%;
+            height: 70vh;
+            border: 1px solid #dee2e6;
+            border-radius: 0.25rem;
+        }
