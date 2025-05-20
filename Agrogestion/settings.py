@@ -128,10 +128,6 @@ STATICFILES_DIRS = [
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Configuración de archivos media (solo una vez)
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-
 SESSION_COOKIE_AGE = 3600  # 30 segundos de inactividad
 SESSION_SAVE_EVERY_REQUEST = True  # Renovar el tiempo con cada acción
 

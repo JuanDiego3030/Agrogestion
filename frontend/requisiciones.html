@@ -1,0 +1,289 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Requisiciones - Sistema de Compras</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'css/paneles-style.css' %}">
+</head>
+<body>
+    <div class="d-flex" style="min-height: 100vh;">
+        <!-- Sidebar -->
+        <div class="bg-dark text-white" style="width: 250px;">
+            <div class="p-3 text-center border-bottom">
+                <img src="{% static 'images/logo.png' %}" alt="Logo" width="80" class="mb-2">
+                <h5>Compras - {{ user.nombre }}</h5>
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="{% url 'compras_requisiciones' %}" class="list-group-item list-group-item-action bg-dark text-white active">
+                    <i class="fas fa-file-invoice me-2"></i>Requisiciones
+                </a>
+                <a href="{% url 'compras_ordenes' %}" class="list-group-item list-group-item-action bg-dark text-white">
+                    <i class="fas fa-file-purchase-order me-2"></i>Órdenes de compra
+                </a>
+                <a href="{% url 'logout' %}" class="list-group-item list-group-item-action bg-dark text-white">
+                    <i class="fas fa-power-off me-2"></i>Cerrar Sesión
+                </a>
+            </div>
+        </div>
+
+        <!-- Contenido Principal -->
+        <div class="flex-grow-1 p-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="fas fa-file-invoice me-2"></i>Mis Requisiciones</h2>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#nuevaReqModal">
+                    <i class="fas fa-plus me-1"></i> Nueva
+                </button>
+            </div>
+
+            {% if messages %}
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endfor %}
+            {% endif %}
+
+            <!-- Tabla de Requisiciones -->
+            <div class="card">
+                <div class="card-body">
+                    {% if requisiciones %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Usuario</th>
+                                    <th>Descripción</th>
+                                    <th>Requisición</th>
+                                    <th>Aprobación</th>
+                                    <th>Fecha Registro</th>
+                                    <th>Fecha Requerida</th>
+                                    <th>Estado</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for req in requisiciones %}
+                                <tr>
+                                    <td>{{ req.codigo }}</td>
+                                    <td>{{ req.usuario.nombre }}</td>
+                                    <td>{{ req.descripcion|truncatechars:30 }}</td>
+                                    <td>
+                                        <a href="#" class="view-pdf" 
+                                           data-req-id="{{ req.id }}"
+                                           data-filepath="{{ req.archivo.name }}"
+                                           title="Ver {{ req.archivo.name|slice:'13:' }}">
+                                            <i class="fas fa-file-pdf file-icon"></i>
+                                        </a>
+                                    </td>
+                                    <td>
+                                        {% if req.archivo_aprobacion %}
+                                            <a href="#" class="view-aprobacion" 
+                                               data-req-id="{{ req.id }}"
+                                               data-filepath="{{ req.archivo_aprobacion.name }}"
+                                               title="Ver {{ req.archivo_aprobacion.name|slice:'13:' }}">
+                                                <i class="fas fa-file-pdf file-icon"></i>
+                                            </a>
+                                        {% else %}
+                                            <span class="text-muted">Sin aprobación</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ req.fecha_registro|date:"d/m/Y" }}</td>
+                                    <td>{{ req.fecha_requerida|date:"d/m/Y" }}</td>
+                                    <td>
+                                        <span class="badge 
+                                            {% if req.estado == 'P' %}bg-warning
+                                            {% elif req.estado == 'A' %}bg-success
+                                            {% else %}bg-danger{% endif %}">
+                                            {{ req.get_estado_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#editarReqModal{{ req.id }}">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#eliminarReqModal{{ req.id }}">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>        
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-inbox fs-1 text-muted mb-3"></i>
+                        <p class="text-muted">No tienes requisiciones registradas</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+<!-- Modal Nueva Requisición -->
+<div class="modal fade" id="nuevaReqModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" name="accion" value="crear">
+                <div class="modal-header">
+                    <h5 class="modal-title">Nueva Requisición</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Código de Requisición:</label>
+                        <input type="text" name="codigo" class="form-control" required
+                               placeholder="Ej: REQ-2023-001" pattern="[A-Za-z0-9-]+"
+                               title="Solo letras, números y guiones">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Fecha Requerida:</label>
+                        <input type="date" name="fecha_requerida" class="form-control" required min="{{ fecha_minima }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descripción:</label>
+                        <textarea name="descripcion" class="form-control" rows="3" placeholder="Descripción de la requisición"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Archivo de Requisición (PDF):</label>
+                        <input type="file" name="archivo" class="form-control" accept=".pdf" required>
+                        <div class="form-text">Solo se aceptan archivos PDF (max. 5MB)</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Archivo de Aprobación (PDF - Opcional):</label>
+                        <input type="file" name="archivo_aprobacion" class="form-control" accept=".pdf">
+                        <div class="form-text">Subir solo si ya tiene aprobación</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+<!-- Modales para cada requisición -->
+{% for req in requisiciones %}
+<!-- Modal Editar Requisición -->
+<div class="modal fade" id="editarReqModal{{ req.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" name="req_id" value="{{ req.id }}">
+                <input type="hidden" name="accion" value="editar">
+                <div class="modal-header">
+                    <h5 class="modal-title">Editar Requisición - {{ req.codigo }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Código:</label>
+                        <input type="text" name="codigo" class="form-control" 
+                               value="{{ req.codigo }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Fecha Requerida:</label>
+                        <input type="date" name="fecha_requerida" class="form-control" 
+                               value="{{ req.fecha_requerida|date:'Y-m-d' }}" required min="{{ fecha_minima }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Descripción:</label>
+                        <textarea name="descripcion" class="form-control" rows="3">{{ req.descripcion }}</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Actualizar Requisición (PDF):</label>
+                        <input type="file" name="archivo" class="form-control" accept=".pdf">
+                        <div class="form-text">
+                            Archivo actual: {{ req.archivo.name|slice:"13:" }}<br>
+                            Dejar en blanco para mantener el archivo actual
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Actualizar Aprobación (PDF):</label>
+                        <input type="file" name="archivo_aprobacion" class="form-control" accept=".pdf">
+                        <div class="form-text">
+                            {% if req.archivo_aprobacion %}
+                                Archivo actual: {{ req.archivo_aprobacion.name|slice:"13:" }}<br>
+                            {% else %}
+                                No se ha subido archivo de aprobación<br>
+                            {% endif %}
+                            Dejar en blanco para mantener el archivo actual
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Eliminar Requisición -->
+<div class="modal fade" id="eliminarReqModal{{ req.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="req_id" value="{{ req.id }}">
+                <input type="hidden" name="accion" value="eliminar">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">Eliminar Requisición</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>¿Estás seguro de eliminar la requisición <strong>{{ req.codigo }}</strong>?</p>
+                    <p class="text-muted">Esta acción no se puede deshacer</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Confirmar Eliminación</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Manejar clic en iconos de PDF de requisición
+    document.querySelectorAll('.view-pdf').forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const reqId = this.getAttribute('data-req-id');
+            const pdfUrl = `/ver-pdf/requisicion/${reqId}/?view=true`;
+            window.open(pdfUrl, '_blank');
+        });
+    });
+    
+    // Manejar clic en iconos de PDF de aprobación
+    document.querySelectorAll('.view-aprobacion').forEach(link => {
+        link.addEventListener('click', function(e) {
+            e.preventDefault();
+            const reqId = this.getAttribute('data-req-id');
+            const pdfUrl = `/ver-pdf/aprobacion/${reqId}/?view=true`;
+            window.open(pdfUrl, '_blank');
+        });
+    });
+});
+    </script>
+</body>
+</html>
