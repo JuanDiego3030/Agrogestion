@@ -77,8 +77,22 @@ WSGI_APPLICATION = 'Agrogestion.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'agrogestion.sqlite3',
-    }
+        'NAME': BASE_DIR / 'agrogestion.sqlite3',  # Base de datos SQLite por defecto
+    },
+    'sqlserver': {
+        'ENGINE': 'mssql',
+        'NAME': 'agro_pru',
+        'USER': 'profit',
+        'PASSWORD': 'profit',
+        'HOST': 'agroserver', 
+        'PORT': '1433',        
+        'OPTIONS': {
+            'driver': 'FreeTDS',
+            'tds_version': '7.4',
+            'host_is_server': True,
+        },
+        'TIME_ZONE': 'UTC',
+}
 }
 
 
@@ -141,3 +155,5 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'juanxcosa@gmail.com'  # Tu correo electrónico
 EMAIL_HOST_PASSWORD = 'ykln ddza qdel qfjf'  # Tu contraseña de correo
+
+DATABASE_ROUTERS = ['routers.SqlServerRouter']

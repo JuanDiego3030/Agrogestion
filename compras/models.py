@@ -17,7 +17,6 @@ class User_com(models.Model):
     def check_password(self, raw_password):
         return check_password(raw_password, self.password)
     
-
 class Requisicion(models.Model):
     ESTADOS = (
         ('P', 'Pendiente'),
@@ -83,3 +82,16 @@ class OrdenCompra(models.Model):
         if self.archivo:
             self.archivo.delete()
         super().delete(*args, **kwargs)
+
+class Proveedor(models.Model):
+    co_prov = models.CharField(max_length=10, primary_key=True)  # Código del proveedor
+    prov_des = models.CharField(max_length=60)  # Nombre/descripción del proveedor
+    # Agrega otros campos que necesites de la tabla prov
+
+    class Meta:
+        managed = False  # Para tablas existentes
+        db_table = 'prov'  # Nombre exacto de la tabla en SQL Server
+        verbose_name_plural = 'Proveedores'
+
+    def __str__(self):
+        return f"{self.co_prov} - {self.prov_des}"

@@ -2,7 +2,7 @@ from django.views.decorators.cache import never_cache
 from django.contrib.auth.hashers import check_password
 from django.contrib import messages
 from django.shortcuts import render, redirect
-from .models import User_com, Requisicion, OrdenCompra
+from .models import User_com, Requisicion, OrdenCompra, Proveedor
 from django.shortcuts import get_object_or_404
 import os
 from django.http import FileResponse, HttpResponseNotFound
@@ -10,6 +10,8 @@ from django.conf import settings
 from .compras import RequisicionService, OrdenCompraService
 from datetime import datetime
 from django.urls import reverse
+from django.http import FileResponse, HttpResponse
+from django.conf import settings
 
 
 def compras_login(request):
@@ -98,6 +100,20 @@ def compras_ordenes(request):
     except User_com.DoesNotExist:
         messages.error(request, 'Usuario no encontrado')
         return redirect('compras_login')
+    
+    # Obtener proveedores de la base de datos SQL Server
+    try:
+        proveedores = Proveedor.objects.using('sqlserver').all().order_by('prov_des')
+    except Exception as e:
+        messages.error(request, f'Error al cargar proveedores: {str(e)}')
+        proveedores = []
+    
+    if request.method == 'POST':
+        accion = request.POST.get('accion')
+        
+        if accion == 'crear_orden':
+            if OrdenCompraService.crear_orden(request, user):
+                return redirect('compras_ordenes')
         
     if request.method == 'POST':
         accion = request.POST.get('accion')
@@ -121,18 +137,12 @@ def compras_ordenes(request):
 
     return render(request, 'ordenes.html', {
         'user': user,
-        'ordenes_compra': ordenes_compra,
-        'requisiciones': requisiciones,
+        'ordenes_compra': OrdenCompra.objects.all().order_by('-fecha_creacion'),
+        'requisiciones': Requisicion.objects.all().order_by('-fecha_registro'),
+        'proveedores': proveedores,  # Pasar proveedores al template
         'estados_orden': OrdenCompra.ESTADOS,
         'fecha_minima': datetime.now().strftime('%Y-%m-%d')
     })
-
-from django.http import FileResponse, HttpResponse
-import os
-
-from django.http import FileResponse, HttpResponse
-import os
-from django.conf import settings
 
 def ver_pdf(request, doc_type, doc_id):
 
