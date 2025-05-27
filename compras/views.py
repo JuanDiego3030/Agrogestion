@@ -81,6 +81,14 @@ def compras_requisiciones(request):
     
     requisiciones = Requisicion.objects.all().order_by('-fecha_registro')
 
+    buscar = request.GET.get('buscar', '').strip()
+    estado = request.GET.get('estado', '').strip()
+
+    if buscar:
+        requisiciones = requisiciones.filter(codigo__icontains=buscar)
+    if estado:
+        requisiciones = requisiciones.filter(estado=estado)
+
     return render(request, 'requisiciones.html', {
         'user': user,
         'requisiciones': requisiciones,
@@ -133,11 +141,18 @@ def compras_ordenes(request):
         return redirect('compras_ordenes')
     
     ordenes_compra = OrdenCompra.objects.all().order_by('-fecha_creacion')
-    requisiciones = Requisicion.objects.all().order_by('-fecha_registro')
+
+    buscar = request.GET.get('buscar', '').strip()
+    estado = request.GET.get('estado', '').strip()
+
+    if buscar:
+        ordenes_compra = ordenes_compra.filter(codigo__icontains=buscar)
+    if estado:
+        ordenes_compra = ordenes_compra.filter(estado=estado)
 
     return render(request, 'ordenes.html', {
         'user': user,
-        'ordenes_compra': OrdenCompra.objects.all().order_by('-fecha_creacion'),
+        'ordenes_compra': ordenes_compra,
         'requisiciones': Requisicion.objects.all().order_by('-fecha_registro'),
         'proveedores': proveedores,  # Pasar proveedores al template
         'estados_orden': OrdenCompra.ESTADOS,
@@ -145,10 +160,25 @@ def compras_ordenes(request):
     })
 
 def ver_pdf(request, doc_type, doc_id):
-
+    import os
     try:
-        # Determinar el modelo y campo de archivo según el tipo
-        if doc_type == 'requisicion':
+        if doc_type == 'orden':
+            doc = get_object_or_404(OrdenCompra, id=doc_id)
+            file_field = doc.archivo
+            filename = f"orden_{doc.codigo}.pdf"
+        elif doc_type == 'orden_aprobacion':
+            doc = get_object_or_404(OrdenCompra, id=doc_id)
+            file_field = doc.archivo_aprobacion
+            if not file_field:
+                return HttpResponseNotFound("No existe archivo de aprobación")
+            filename = f"aprobacion_orden_{doc.codigo}.pdf"
+        elif doc_type == 'cuadro_comparativo':
+            doc = get_object_or_404(OrdenCompra, id=doc_id)
+            file_field = doc.archivo_cuadro_comparativo
+            if not file_field:
+                return HttpResponseNotFound("No existe archivo de cuadro comparativo")
+            filename = f"cuadro_comparativo_{doc.codigo}.pdf"
+        elif doc_type == 'requisicion':
             doc = get_object_or_404(Requisicion, id=doc_id)
             file_field = doc.archivo
             filename = f"requisicion_{doc.codigo}.pdf"
@@ -158,10 +188,6 @@ def ver_pdf(request, doc_type, doc_id):
             if not file_field:
                 return HttpResponseNotFound("No existe archivo de aprobación")
             filename = f"aprobacion_{doc.codigo}.pdf"
-        elif doc_type == 'orden':
-            doc = get_object_or_404(OrdenCompra, id=doc_id)
-            file_field = doc.archivo
-            filename = f"orden_{doc.codigo}.pdf"
         else:
             return HttpResponseNotFound("Tipo de documento no válido")
 
@@ -170,10 +196,7 @@ def ver_pdf(request, doc_type, doc_id):
         if not os.path.exists(file_path):
             return HttpResponseNotFound("El archivo no existe en el servidor")
 
-        # Determinar si es para visualizar o descargar
         disposition = 'inline' if request.GET.get('view', 'true').lower() == 'true' else 'attachment'
-        
-        # Configurar la respuesta
         with open(file_path, 'rb') as pdf_file:
             response = HttpResponse(pdf_file.read(), content_type='application/pdf')
             response['Content-Disposition'] = f'{disposition}; filename="{filename}"'

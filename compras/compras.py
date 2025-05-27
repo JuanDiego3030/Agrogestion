@@ -1,5 +1,4 @@
 from django.contrib import messages
-from django.shortcuts import redirect
 from .models import Requisicion, OrdenCompra
 from datetime import datetime
 from django.core.files.storage import default_storage
@@ -172,7 +171,6 @@ from datetime import datetime
 import os
 
 class OrdenCompraService:
-    
     @staticmethod
     def validar_archivo_pdf(archivo):
         """Valida que el archivo sea PDF y no exceda el tamaño máximo"""
@@ -204,12 +202,22 @@ class OrdenCompraService:
         Crea una nueva orden de compra con validación mejorada
         """
         try:
-            # Validación de archivo
             if 'archivo_orden' not in request.FILES:
-                raise ValidationError('Debe seleccionar un archivo PDF de la orden')
-            
+                messages.error(request, 'Debe adjuntar el archivo PDF de la orden')
+                return False
+
             archivo = request.FILES['archivo_orden']
             OrdenCompraService.validar_archivo_pdf(archivo)
+
+            archivo_aprobacion = None
+            if 'archivo_aprobacion' in request.FILES:
+                archivo_aprobacion = request.FILES['archivo_aprobacion']
+                OrdenCompraService.validar_archivo_pdf(archivo_aprobacion)
+
+            archivo_cuadro = None
+            if 'archivo_cuadro_comparativo' in request.FILES:
+                archivo_cuadro = request.FILES['archivo_cuadro_comparativo']
+                OrdenCompraService.validar_archivo_pdf(archivo_cuadro)
 
             # Obtener y validar datos del formulario
             datos = {
@@ -236,27 +244,27 @@ class OrdenCompraService:
 
             # Procesar proveedor
             proveedor = OrdenCompraService.obtener_proveedor_desde_formulario(datos['proveedor_info'])
-            
             # Verificar que el proveedor existe en la base de datos externa
             if not Proveedor.objects.using('sqlserver').filter(co_prov=proveedor['codigo']).exists():
                 raise ValidationError('El proveedor seleccionado no existe en el sistema')
+
+            estado = 'A' if archivo_aprobacion else 'P'
 
             # Crear la orden de compra
             orden = OrdenCompra(
                 codigo=datos['codigo'],
                 archivo=archivo,
-                fecha_creacion=datetime.now(),
+                archivo_aprobacion=archivo_aprobacion,
+                archivo_cuadro_comparativo=archivo_cuadro,
                 fecha_entrega_esperada=datos['fecha_entrega'],
                 descripcion=datos['descripcion'],
                 proveedor=f"{proveedor['codigo']} - {proveedor['nombre']}",
                 requisicion=requisicion,
                 creador=user,
-                estado='P'  # Por defecto Pendiente
+                estado=estado
             )
-
-            orden.full_clean()  # Validación del modelo
+            orden.full_clean()
             orden.save()
-            
             messages.success(request, f'Orden de compra {datos["codigo"]} creada exitosamente!')
             return True
             
@@ -275,66 +283,72 @@ class OrdenCompraService:
         """
         try:
             orden_id = request.POST.get('orden_id')
-            if not orden_id:
-                raise ValidationError('ID de orden no proporcionado')
-                
-            orden = OrdenCompra.objects.select_for_update().get(id=orden_id)
-            
+            orden = OrdenCompra.objects.get(id=orden_id)
+
             # Verificar permisos
             if orden.creador != user:
                 raise ValidationError('No tienes permiso para editar esta orden')
-            
+
             # Obtener datos del formulario
-            datos = {
-                'codigo': request.POST.get('codigo', '').strip(),
-                'proveedor_info': request.POST.get('proveedor', '').strip(),
-                'fecha_entrega': request.POST.get('fecha_entrega'),
-                'descripcion': request.POST.get('descripcion', '').strip(),
-                'estado': request.POST.get('estado', 'P'),
-            }
+            codigo = request.POST.get('codigo', '').strip()
+            proveedor_info = request.POST.get('proveedor', '').strip()
+            fecha_entrega = request.POST.get('fecha_entrega', '').strip()
+            descripcion = request.POST.get('descripcion', '').strip()
+            estado = request.POST.get('estado', '').strip()
 
-            # Validar campos requeridos
-            if not all([datos['codigo'], datos['proveedor_info'], datos['fecha_entrega']]):
-                raise ValidationError('Todos los campos son obligatorios')
-                
-            # Validar código único (si cambió)
-            if datos['codigo'] != orden.codigo and OrdenCompra.objects.filter(codigo=datos['codigo']).exists():
-                raise ValidationError('El código ya está en uso')
+            # Solo validar código único si se modifica
+            if codigo and codigo != orden.codigo:
+                if OrdenCompra.objects.filter(codigo=codigo).exists():
+                    raise ValidationError('El código ya está en uso')
+                orden.codigo = codigo
 
-            # Procesar proveedor
-            proveedor = OrdenCompraService.obtener_proveedor_desde_formulario(datos['proveedor_info'])
-            
-            # Verificar que el proveedor existe en la base de datos externa
-            if not Proveedor.objects.using('sqlserver').filter(co_prov=proveedor['codigo']).exists():
-                raise ValidationError('El proveedor seleccionado no existe en el sistema')
+            # Procesar proveedor solo si se envió uno nuevo
+            if proveedor_info:
+                proveedor = OrdenCompraService.obtener_proveedor_desde_formulario(proveedor_info)
+                if not Proveedor.objects.using('sqlserver').filter(co_prov=proveedor['codigo']).exists():
+                    raise ValidationError('El proveedor seleccionado no existe en el sistema')
+                orden.proveedor = proveedor_info
+
+            # Actualizar fecha de entrega si se envió
+            if fecha_entrega:
+                orden.fecha_entrega_esperada = fecha_entrega
+
+            # Actualizar descripción si se envió
+            if descripcion:
+                orden.descripcion = descripcion
+
+            # Actualizar estado si se envió
+            if estado:
+                orden.estado = estado
 
             # Manejo de archivos
             if 'archivo_orden' in request.FILES:
                 archivo = request.FILES['archivo_orden']
                 OrdenCompraService.validar_archivo_pdf(archivo)
-                
-                # Eliminar archivo anterior si existe
                 if orden.archivo:
-                    try:
-                        os.remove(orden.archivo.path)
-                    except:
-                        pass  # Si falla la eliminación del archivo físico, continuamos
-                
+                    orden.archivo.delete()
                 orden.archivo = archivo
-            
-            # Actualizar campos
-            orden.codigo = datos['codigo']
-            orden.proveedor = f"{proveedor['codigo']} - {proveedor['nombre']}"
-            orden.fecha_entrega_esperada = datos['fecha_entrega']
-            orden.descripcion = datos['descripcion']
-            orden.estado = datos['estado']
-            
-            orden.full_clean()  # Validación del modelo
+
+            if 'archivo_aprobacion' in request.FILES:
+                archivo_aprobacion = request.FILES['archivo_aprobacion']
+                OrdenCompraService.validar_archivo_pdf(archivo_aprobacion)
+                if orden.archivo_aprobacion:
+                    orden.archivo_aprobacion.delete()
+                orden.archivo_aprobacion = archivo_aprobacion
+                orden.estado = 'A'  # Solo aquí se cambia a aprobado
+
+            if 'archivo_cuadro_comparativo' in request.FILES:
+                archivo_cuadro = request.FILES['archivo_cuadro_comparativo']
+                OrdenCompraService.validar_archivo_pdf(archivo_cuadro)
+                if orden.archivo_cuadro_comparativo:
+                    orden.archivo_cuadro_comparativo.delete()
+                orden.archivo_cuadro_comparativo = archivo_cuadro
+
+            orden.full_clean()
             orden.save()
-            
-            messages.success(request, f'Orden {datos["codigo"]} actualizada exitosamente!')
+            messages.success(request, f'Orden {orden.codigo} actualizada exitosamente!')
             return True
-            
+
         except OrdenCompra.DoesNotExist:
             messages.error(request, 'Orden no encontrada')
             return False

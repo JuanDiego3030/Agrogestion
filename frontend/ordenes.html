@@ -48,6 +48,33 @@
                 {% endfor %}
             {% endif %}
 
+            <!-- Barra de búsqueda y filtro por estado -->
+<form method="get" class="row g-2 mb-3 align-items-end">
+    <div class="col-md-4">
+        <label class="form-label mb-0">Buscar por número:</label>
+        <input type="text" name="buscar" value="{{ request.GET.buscar }}" class="form-control" placeholder="Ej: OC-2023-001 o REQ-2023-001">
+    </div>
+    <div class="col-md-3">
+        <label class="form-label mb-0">Filtrar por estado:</label>
+        <select name="estado" class="form-select">
+            <option value="">Todos</option>
+            <option value="P" {% if request.GET.estado == "P" %}selected{% endif %}>Pendiente</option>
+            <option value="A" {% if request.GET.estado == "A" %}selected{% endif %}>Aprobada</option>
+            <option value="N" {% if request.GET.estado == "N" %}selected{% endif %}>Negada</option>
+        </select>
+    </div>
+    <div class="col-md-2">
+        <button type="submit" class="btn btn-outline-primary w-100">
+            <i class="fas fa-search"></i> Buscar
+        </button>
+    </div>
+    <div class="col-md-2">
+        <a href="?" class="btn btn-outline-secondary w-100">
+            <i class="fas fa-eraser"></i> Limpiar
+        </a>
+    </div>
+</form>
+
             <!-- Tabla de Órdenes de Compra -->
             <div class="card">
                 <div class="card-body">
@@ -58,7 +85,9 @@
                                     <th>Código Orden</th>
                                     <th>Requisición</th>
                                     <th>Proveedor</th>
-                                    <th>Archivo</th>
+                                    <th>Orden de Compra</th>
+                                    <th>Aprobación</th>
+                                    <th>Cuadro Comparativo</th>
                                     <th>Fecha Creación</th>
                                     <th>Fecha Entrega</th>
                                     <th>Estado</th>
@@ -72,11 +101,37 @@
                                     <td>{{ orden.requisicion.codigo }}</td>
                                     <td>{{ orden.proveedor }}</td>
                                     <td>
-                                        <a href="#" class="view-pdf-orden" 
-                                           data-orden-id="{{ orden.id }}"
-                                           title="Ver {{ orden.archivo.name|slice:'15:' }}">
-                                            <i class="fas fa-file-pdf file-icon"></i>
-                                        </a>
+                                        {% if orden.archivo %}
+                                            <a href="#" class="view-pdf-orden" 
+                                               data-orden-id="{{ orden.id }}"
+                                               title="Ver {{ orden.archivo.name|slice:'15:' }}">
+                                                <i class="fas fa-file-pdf file-icon"></i>
+                                            </a>
+                                        {% else %}
+                                            <span class="text-muted">Sin archivo</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if orden.archivo_aprobacion %}
+                                            <a href="#" class="view-pdf-orden-aprobacion" 
+                                               data-orden-id="{{ orden.id }}"
+                                               title="Ver {{ orden.archivo_aprobacion.name|slice:'21:' }}">
+                                                <i class="fas fa-file-pdf file-icon"></i>
+                                            </a>
+                                        {% else %}
+                                            <span class="text-muted">Sin archivo</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if orden.archivo_cuadro_comparativo %}
+                                            <a href="#" class="view-pdf-cuadro" 
+                                               data-orden-id="{{ orden.id }}"
+                                               title="Ver {{ orden.archivo_cuadro_comparativo.name|slice:'26:' }}">
+                                                <i class="fas fa-file-pdf file-icon"></i>
+                                            </a>
+                                        {% else %}
+                                            <span class="text-muted">Sin archivo</span>
+                                        {% endif %}
                                     </td>
                                     <td>{{ orden.fecha_creacion|date:"d/m/Y" }}</td>
                                     <td>{{ orden.fecha_entrega_esperada|date:"d/m/Y" }}</td>
@@ -105,7 +160,7 @@
                                 </tr>
                                 {% empty %}
                                 <tr>
-                                    <td colspan="8" class="text-center py-4">
+                                    <td colspan="10" class="text-center py-4">
                                         <i class="fas fa-inbox fs-1 text-muted mb-3"></i>
                                         <p class="text-muted">No hay órdenes de compra registradas</p>
                                     </td>
@@ -160,7 +215,7 @@
     </div>
     <div class="col-md-6 mb-3">
         <label class="form-label">Fecha Entrega Esperada:</label>
-        <input type="date" name="fecha_entrega" class="form-control" required min="{{ fecha_minima }}">
+        <input type="date" name="fecha_entrega" class="form-control" required>
     </div>
 </div>
                     <div class="mb-3">
@@ -172,6 +227,16 @@
                         <input type="file" name="archivo_orden" class="form-control" accept=".pdf" required>
                         <div class="form-text">Solo se aceptan archivos PDF (max. 5MB)</div>
                     </div>
+<div class="mb-3">
+    <label class="form-label">Archivo de Aprobación (PDF - Opcional):</label>
+    <input type="file" name="archivo_aprobacion" class="form-control" accept=".pdf">
+    <div class="form-text">Subir solo si ya tiene aprobación</div>
+</div>
+<div class="mb-3">
+    <label class="form-label">Cuadro Comparativo (PDF - Opcional):</label>
+    <input type="file" name="archivo_cuadro_comparativo" class="form-control" accept=".pdf">
+    <div class="form-text">Subir solo si aplica</div>
+</div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -199,21 +264,25 @@
                     <div class="row">
 <div class="col-md-6 mb-3">
     <label class="form-label">Proveedor:</label>
-    <select name="proveedor" class="form-select select-proveedor" required>
-        <option value="">Seleccione un proveedor</option>
+    <select name="proveedor" class="form-select">
+        <option value="">(Mantener proveedor actual)</option>
         {% for prov in proveedores %}
-            <option value="{{ prov.co_prov }} - {{ prov.prov_des }}">
+            <option value="{{ prov.co_prov }} - {{ prov.prov_des }}"
+                {% if orden.proveedor == prov.co_prov|add:" - "|add:prov.prov_des %}selected{% endif %}>
                 {{ prov.co_prov }} - {{ prov.prov_des }}
             </option>
         {% endfor %}
     </select>
+    <div class="form-text">
+        Proveedor actual: <strong>{{ orden.proveedor }}</strong>
+    </div>
 </div>
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Fecha Entrega:</label>
                             <input type="date" name="fecha_entrega" class="form-control" 
-                                   value="{{ orden.fecha_entrega_esperada|date:'Y-m-d' }}" required min="{{ fecha_minima }}">
+                                   value="{{ orden.fecha_entrega_esperada|date:'Y-m-d' }}" required>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Estado:</label>
@@ -237,6 +306,28 @@
                             Archivo actual: {{ orden.archivo.name|slice:"15:" }}
                         </div>
                     </div>
+<div class="mb-3">
+    <label class="form-label">Actualizar Archivo de Aprobación (opcional):</label>
+    <input type="file" name="archivo_aprobacion" class="form-control" accept=".pdf">
+    <div class="form-text">
+        {% if orden.archivo_aprobacion %}
+            Archivo actual: {{ orden.archivo_aprobacion.name|slice:"21:" }}
+        {% else %}
+            No se ha subido archivo de aprobación
+        {% endif %}
+    </div>
+</div>
+<div class="mb-3">
+    <label class="form-label">Actualizar Cuadro Comparativo (opcional):</label>
+    <input type="file" name="archivo_cuadro_comparativo" class="form-control" accept=".pdf">
+    <div class="form-text">
+        {% if orden.archivo_cuadro_comparativo %}
+            Archivo actual: {{ orden.archivo_cuadro_comparativo.name|slice:"26:" }}
+        {% else %}
+            No se ha subido cuadro comparativo
+        {% endif %}
+    </div>
+</div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>

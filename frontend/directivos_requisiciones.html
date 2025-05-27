@@ -1,0 +1,178 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Requisiciones - Directivos</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'css/paneles-style.css' %}">
+</head>
+<body>
+    <div class="d-flex" style="min-height: 100vh;">
+        <!-- Sidebar -->
+        <div class="bg-dark text-white" style="width: 250px;">
+            <div class="p-3 text-center border-bottom">
+                <img src="{% static 'images/logo.png' %}" alt="Logo" width="80" class="mb-2">
+                <h5>Directivos - {{ user.nombre }}</h5>
+            </div>
+            <div class="list-group list-group-flush">
+                <a href="{% url 'directivos_requisiciones' %}" class="list-group-item list-group-item-action bg-dark text-white active">
+                    <i class="fas fa-file-invoice me-2"></i>Requisiciones
+                </a>
+                <a href="{% url 'directivos_login' %}?logout=1" class="list-group-item list-group-item-action bg-dark text-white">
+                    <i class="fas fa-power-off me-2"></i>Cerrar Sesión
+                </a>
+            </div>
+        </div>
+
+        <!-- Contenido Principal -->
+        <div class="flex-grow-1 p-4">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="fas fa-file-invoice me-2"></i>Requisiciones</h2>
+            </div>
+
+            {% if messages %}
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endfor %}
+            {% endif %}
+
+            <!-- Barra de búsqueda y filtro por estado -->
+            <form method="get" class="row g-2 mb-3 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label mb-0">Buscar por número:</label>
+                    <input type="text" name="buscar" value="{{ request.GET.buscar }}" class="form-control" placeholder="Ej: REQ-2023-001">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label mb-0">Filtrar por estado:</label>
+                    <select name="estado" class="form-select">
+                        <option value="">Todos</option>
+                        <option value="P" {% if request.GET.estado == "P" %}selected{% endif %}>Pendiente</option>
+                        <option value="A" {% if request.GET.estado == "A" %}selected{% endif %}>Aprobada</option>
+                        <option value="N" {% if request.GET.estado == "N" %}selected{% endif %}>Negada</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-outline-primary w-100">
+                        <i class="fas fa-search"></i> Buscar
+                    </button>
+                </div>
+                <div class="col-md-2">
+                    <a href="?" class="btn btn-outline-secondary w-100">
+                        <i class="fas fa-eraser"></i> Limpiar
+                    </a>
+                </div>
+            </form>
+
+            <!-- Tabla de Requisiciones -->
+            <div class="card">
+                <div class="card-body">
+                    {% if requisiciones %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Usuario</th>
+                                    <th>Descripción</th>
+                                    <th>Requisición</th>
+                                    <th>Aprobación</th>
+                                    <th>Fecha Registro</th>
+                                    <th>Fecha Requerida</th>
+                                    <th>Estado</th>
+                                    <th>Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for req in requisiciones %}
+                                <tr>
+                                    <td>{{ req.codigo }}</td>
+                                    <td>{{ req.usuario.nombre }}</td>
+                                    <td>{{ req.descripcion|truncatechars:30 }}</td>
+                                    <td>
+                                        <a href="#" class="view-pdf" 
+                                           data-req-id="{{ req.id }}"
+                                           data-filepath="{{ req.archivo.name }}"
+                                           title="Ver {{ req.archivo.name|slice:'13:' }}">
+                                            <i class="fas fa-file-pdf file-icon"></i>
+                                        </a>
+                                    </td>
+                                    <td>
+                                        {% if req.archivo_aprobacion %}
+                                            <a href="#" class="view-aprobacion" 
+                                               data-req-id="{{ req.id }}"
+                                               data-filepath="{{ req.archivo_aprobacion.name }}"
+                                               title="Ver {{ req.archivo_aprobacion.name|slice:'13:' }}">
+                                                <i class="fas fa-file-pdf file-icon"></i>
+                                            </a>
+                                        {% else %}
+                                            <span class="text-muted">Sin aprobación</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ req.fecha_registro|date:"d/m/Y" }}</td>
+                                    <td>{{ req.fecha_requerida|date:"d/m/Y" }}</td>
+                                    <td>
+                                        <span class="badge 
+                                            {% if req.estado == 'P' %}bg-warning
+                                            {% elif req.estado == 'A' %}bg-success
+                                            {% else %}bg-danger{% endif %}">
+                                            {{ req.get_estado_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if req.estado == 'P' %}
+                                        <form method="post" action="{% url 'firmar_requisicion' req.id %}">
+                                            {% csrf_token %}
+                                            <button type="submit" class="btn btn-success btn-sm">
+                                                <i class="fas fa-signature"></i> Firmar
+                                            </button>
+                                        </form>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>        
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-inbox fs-1 text-muted mb-3"></i>
+                        <p class="text-muted">No hay requisiciones registradas</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Manejar clic en iconos de PDF de requisicion
+        document.querySelectorAll('.view-pdf').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const reqId = this.getAttribute('data-req-id');
+                const pdfUrl = `/ver-pdf/requisicion/${reqId}/?view=true`;
+                window.open(pdfUrl, '_blank');
+            });
+        });
+        // Manejar clic en iconos de PDF de aprobación
+        document.querySelectorAll('.view-aprobacion').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                const reqId = this.getAttribute('data-req-id');
+                const pdfUrl = `/ver-pdf/aprobacion/${reqId}/?view=true`;
+                window.open(pdfUrl, '_blank');
+            });
+        });
+    });
+    </script>
+</body>
+</html>

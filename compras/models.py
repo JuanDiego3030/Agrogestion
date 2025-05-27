@@ -21,7 +21,7 @@ class Requisicion(models.Model):
     ESTADOS = (
         ('P', 'Pendiente'),
         ('A', 'Aprobada'),
-        ('R', 'Rechazada'),
+        ('N', 'Negada'),
     )
     
     codigo = models.CharField(max_length=20, unique=True)
@@ -56,14 +56,14 @@ class OrdenCompra(models.Model):
     ESTADOS = (
         ('P', 'Pendiente'),
         ('A', 'Aprobada'),
-        ('E', 'Enviada'),
-        ('R', 'Recibida'),
-        ('C', 'Cancelada'),
+        ('N', 'Negada'),
     )
     
     requisicion = models.ForeignKey(Requisicion, on_delete=models.CASCADE, related_name='ordenes_compra')
     codigo = models.CharField(max_length=20, unique=True)
     archivo = models.FileField(upload_to='ordenes_compra/')
+    archivo_aprobacion = models.FileField(upload_to='ordenes_aprobacion/', null=True, blank=True)
+    archivo_cuadro_comparativo = models.FileField(upload_to='cuadros_comparativos/', null=True, blank=True)  # Nuevo campo
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_entrega_esperada = models.DateField()
     proveedor = models.CharField(max_length=100)
@@ -78,9 +78,12 @@ class OrdenCompra(models.Model):
         return f"{self.codigo} - {self.get_estado_display()}"
     
     def delete(self, *args, **kwargs):
-        """Eliminar archivo físico al borrar la orden"""
         if self.archivo:
             self.archivo.delete()
+        if self.archivo_aprobacion:
+            self.archivo_aprobacion.delete()
+        if self.archivo_cuadro_comparativo:
+            self.archivo_cuadro_comparativo.delete()
         super().delete(*args, **kwargs)
 
 class Proveedor(models.Model):
