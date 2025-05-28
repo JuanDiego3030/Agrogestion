@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from .models import User_dir
-from compras.models import Requisicion
+from compras.models import Requisicion, OrdenCompra
 from django.contrib.auth.hashers import check_password
 from django.views.decorators.cache import never_cache
 from django.views.decorators.http import require_POST
@@ -124,3 +124,83 @@ def firmar_requisicion(request, req_id):
     else:
         messages.info(request, 'La requisición ya fue aprobada o negada.')
     return redirect('directivos_requisiciones')
+
+@never_cache
+def directivos_ordenes(request):
+    user_id = request.session.get('user_dir_id')
+    if not user_id:
+        messages.error(request, 'Debe iniciar sesión primero')
+        return redirect('directivos_login')
+    try:
+        user = User_dir.objects.get(id=user_id)
+    except User_dir.DoesNotExist:
+        messages.error(request, 'Usuario no encontrado')
+        return redirect('directivos_login')
+
+    # Filtrar órdenes de compra asociadas a esas requisiciones
+    ordenes = OrdenCompra.objects.all().order_by('-fecha_creacion')
+
+    buscar = request.GET.get('buscar', '').strip()
+    estado = request.GET.get('estado', '').strip()
+
+    if buscar:
+        ordenes = ordenes.filter(codigo__icontains=buscar)
+    if estado:
+        ordenes = ordenes.filter(estado=estado)
+
+    return render(request, 'directivos_ordenes.html', {
+        'user': user,
+        'ordenes_compra': ordenes,  # <-- Así el template funcionará bien
+    })
+
+@require_POST
+def firmar_orden(request, orden_id):
+    user_id = request.session.get('user_dir_id')
+    if not user_id:
+        messages.error(request, 'Debe iniciar sesión primero')
+        return redirect('directivos_login')
+    orden = get_object_or_404(OrdenCompra, id=orden_id)
+    user = get_object_or_404(User_dir, id=user_id)
+    if orden.estado == 'P':
+        pdf_path = orden.archivo.path
+        firma_path = user.firma.path if user.firma else None
+
+        if not firma_path or not os.path.exists(firma_path):
+            messages.error(request, 'No se encontró la firma del directivo.')
+            return redirect('directivos_ordenes')
+
+        pdf_reader = PdfReader(pdf_path)
+        pdf_writer = PdfWriter()
+
+        packet = io.BytesIO()
+        can = canvas.Canvas(packet, pagesize=letter)
+        firma_width = 3 * cm
+        firma_height = 1.5 * cm
+        page_width, page_height = letter
+        x = (page_width - firma_width) / 2.5
+        y = 2.7 * cm
+        can.drawImage(firma_path, x, y, width=firma_width, height=firma_height, mask='auto')
+        can.save()
+        packet.seek(0)
+        firma_pdf = PdfReader(packet)
+
+        for i in range(len(pdf_reader.pages)):
+            page = pdf_reader.pages[i]
+            if i == len(pdf_reader.pages) - 1:
+                page.merge_page(firma_pdf.pages[0])
+            pdf_writer.add_page(page)
+
+        output_stream = io.BytesIO()
+        pdf_writer.write(output_stream)
+        output_stream.seek(0)
+
+        orden.archivo_aprobacion.save(
+            f"aprobacion_orden_{orden.codigo}.pdf",
+            ContentFile(output_stream.read())
+        )
+        orden.estado = 'A'
+        orden.save()
+        messages.success(request, f'Orden {orden.codigo} aprobada/firmada y PDF firmado.')
+    else:
+        messages.info(request, 'La orden ya fue aprobada o negada.')
+    return redirect('directivos_ordenes')
