@@ -15,16 +15,13 @@
         <div class="bg-dark text-white" style="width: 250px;">
             <div class="p-3 text-center border-bottom">
                 <img src="{% static 'images/logo.png' %}" alt="Logo" width="80" class="mb-2">
-                <h5>Compras - {{ user.nombre }}</h5>
+                <h5>Requisitores - {{ user.nombre }}</h5>
             </div>
             <div class="list-group list-group-flush">
-                <a href="{% url 'compras_requisiciones' %}" class="list-group-item list-group-item-action bg-dark text-white active">
+                <a href="{% url 'requisitores_requisiciones' %}" class="list-group-item list-group-item-action bg-dark text-white active">
                     <i class="fas fa-file-invoice me-2"></i>Requisiciones
                 </a>
-                <a href="{% url 'compras_ordenes' %}" class="list-group-item list-group-item-action bg-dark text-white">
-                    <i class="fas fa-file-purchase-order me-2"></i>Órdenes de compra
-                </a>
-                <a href="{% url 'logout' %}" class="list-group-item list-group-item-action bg-dark text-white">
+                <a href="{% url 'requisitores_login' %}?logout=1" class="list-group-item list-group-item-action bg-dark text-white">
                     <i class="fas fa-power-off me-2"></i>Cerrar Sesión
                 </a>
             </div>
@@ -34,6 +31,9 @@
         <div class="flex-grow-1 p-4">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2><i class="fas fa-file-invoice me-2"></i>Mis Requisiciones</h2>
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#nuevaReqModal">
+                    <i class="fas fa-plus me-1"></i> Nueva
+                </button>
             </div>
 
             {% if messages %}
@@ -81,15 +81,14 @@
                             <thead>
                                 <tr>
                                     <th>Código</th>
-                                    <th>Usuario Compras</th>
-                                    <th>Requisitor</th> <!-- Nueva columna -->
+                                    <th>Usuario</th>
                                     <th>Descripción</th>
-                                    <th>Archivo</th>
+                                    <th>Requisición</th>
                                     <th>Aprobación</th>
                                     <th>Fecha Registro</th>
                                     <th>Fecha Requerida</th>
                                     <th>Estado</th>
-                                    <th>Acción</th>
+                                    <th>Acciones</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -97,20 +96,21 @@
                                 <tr>
                                     <td>{{ req.codigo }}</td>
                                     <td>{{ req.usuario.nombre }}</td>
-                                    <td>{{ req.creador_req }}</td> <!-- Aquí se muestra el requisitor -->
                                     <td>{{ req.descripcion|truncatechars:30 }}</td>
                                     <td>
-                                        {% if req.archivo %}
-                                            <a href="#" class="view-pdf" data-req-id="{{ req.id }}" data-filepath="{{ req.archivo.name }}">
-                                                <i class="fas fa-file-pdf file-icon"></i>
-                                            </a>
-                                        {% else %}
-                                            <span class="text-muted">Sin archivo</span>
-                                        {% endif %}
+                                        <a href="#" class="view-pdf" 
+                                           data-req-id="{{ req.id }}"
+                                           data-filepath="{{ req.archivo.name }}"
+                                           title="Ver {{ req.archivo.name|slice:'13:' }}">
+                                            <i class="fas fa-file-pdf file-icon"></i>
+                                        </a>
                                     </td>
                                     <td>
                                         {% if req.archivo_aprobacion %}
-                                            <a href="#" class="view-aprobacion" data-req-id="{{ req.id }}" data-filepath="{{ req.archivo_aprobacion.name }}">
+                                            <a href="#" class="view-aprobacion" 
+                                               data-req-id="{{ req.id }}"
+                                               data-filepath="{{ req.archivo_aprobacion.name }}"
+                                               title="Ver {{ req.archivo_aprobacion.name|slice:'13:' }}">
                                                 <i class="fas fa-file-pdf file-icon"></i>
                                             </a>
                                         {% else %}
@@ -128,11 +128,15 @@
                                         </span>
                                     </td>
                                     <td>
-                                        <!-- Solo botón de editar si aplica -->
                                         <button class="btn btn-sm btn-outline-primary" 
                                                 data-bs-toggle="modal" 
                                                 data-bs-target="#editarReqModal{{ req.id }}">
                                             <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button class="btn btn-sm btn-outline-danger" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#eliminarReqModal{{ req.id }}">
+                                            <i class="fas fa-trash"></i>
                                         </button>
                                     </td>
                                 </tr>
@@ -187,6 +191,15 @@
                         <input type="file" name="archivo_aprobacion" class="form-control" accept=".pdf">
                         <div class="form-text">Subir solo si ya tiene aprobación</div>
                     </div>
+                    <div class="mb-3">
+                        <label for="usuario_com" class="form-label">Usuario de Compras</label>
+                        <select name="usuario_com" id="usuario_com" class="form-select" required>
+                            <option value="">Seleccione usuario de compras</option>
+                            {% for u in usuarios_compras %}
+                                <option value="{{ u.id }}">{{ u.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -204,8 +217,8 @@
         <div class="modal-content">
             <form method="post" enctype="multipart/form-data">
                 {% csrf_token %}
-                <input type="hidden" name="req_id" value="{{ req.id }}">
                 <input type="hidden" name="accion" value="editar">
+                <input type="hidden" name="req_id" value="{{ req.id }}">
                 <div class="modal-header">
                     <h5 class="modal-title">Editar Requisición - {{ req.codigo }}</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -245,10 +258,44 @@
                             Dejar en blanco para mantener el archivo actual
                         </div>
                     </div>
+                    <div class="mb-3">
+                        <label for="usuario_com_{{ req.id }}" class="form-label">Usuario de Compras</label>
+                        <select name="usuario_com" id="usuario_com_{{ req.id }}" class="form-select" required>
+                            <option value="">Seleccione usuario de compras</option>
+                            {% for u in usuarios_compras %}
+                                <option value="{{ u.id }}" {% if req.usuario.id == u.id %}selected{% endif %}>{{ u.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                    <button type="submit" class="btn btn-primary">Guardar cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Eliminar Requisición -->
+<div class="modal fade" id="eliminarReqModal{{ req.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="accion" value="eliminar">
+                <input type="hidden" name="req_id" value="{{ req.id }}">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">Eliminar Requisición</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>¿Estás seguro de eliminar la requisición <strong>{{ req.codigo }}</strong>?</p>
+                    <p class="text-muted">Esta acción no se puede deshacer</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger">Confirmar Eliminación</button>
                 </div>
             </form>
         </div>

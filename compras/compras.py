@@ -1,5 +1,6 @@
 from django.contrib import messages
-from .models import Requisicion, OrdenCompra
+from compras.models import Requisicion, User_com
+from requisitores.models import User_req  # Importa si es necesario
 from datetime import datetime
 from django.core.files.storage import default_storage
 
@@ -7,59 +8,60 @@ from django.core.files.storage import default_storage
 class RequisicionService:
     @staticmethod
     def crear_requisicion(request, user):
-        if 'archivo' not in request.FILES:
-            messages.error(request, 'Debe seleccionar un archivo PDF de requisición')
-            return False
-
-        archivo = request.FILES['archivo']
-        if not archivo.name.lower().endswith('.pdf'):
-            messages.error(request, 'El archivo de requisición debe ser PDF')
-            return False
-
         try:
-            # Validaciones básicas
-            if archivo.size > 5 * 1024 * 1024:
-                messages.error(request, 'El archivo no puede exceder los 5MB')
-                return False
-
             codigo = request.POST.get('codigo', '').strip()
             fecha_requerida = request.POST.get('fecha_requerida', '')
             descripcion = request.POST.get('descripcion', '').strip()
-            
-            if not codigo:
-                messages.error(request, 'El código es obligatorio')
+            archivo = request.FILES.get('archivo')
+            usuario_com_id = request.POST.get('usuario_com')
+            archivo_aprobacion = request.FILES.get('archivo_aprobacion')
+
+            # Validaciones básicas
+            if not all([codigo, fecha_requerida, archivo]):
+                messages.error(request, 'Todos los campos obligatorios deben estar completos')
                 return False
-                
+
             if Requisicion.objects.filter(codigo=codigo).exists():
                 messages.error(request, 'El código ya existe')
                 return False
 
-            # Crear la requisición
+            # Determinar usuario de compras asignado
+            if usuario_com_id:
+                usuario_com = User_com.objects.get(id=usuario_com_id)
+            elif hasattr(user, 'user_com'):
+                usuario_com = user  # Si es User_com, se asigna a sí mismo
+            else:
+                messages.error(request, 'Debe seleccionar un usuario de compras')
+                return False
+
             requisicion = Requisicion(
                 codigo=codigo,
                 archivo=archivo,
                 fecha_requerida=fecha_requerida,
                 descripcion=descripcion,
-                usuario=user,
-                estado='P'  # Por defecto Pendiente
+                usuario=usuario_com,
+                estado='P'
             )
 
+            # Si el usuario es User_req, guarda el nombre como creador
+            if hasattr(user, 'nombre'):
+                requisicion.creador_req = user.nombre
+
             # Manejar archivo de aprobación si se sube
-            if 'archivo_aprobacion' in request.FILES:
-                archivo_aprobacion = request.FILES['archivo_aprobacion']
-                if archivo_aprobacion.name.lower().endswith('.pdf'):
-                    if archivo_aprobacion.size <= 5 * 1024 * 1024:
-                        requisicion.archivo_aprobacion = archivo_aprobacion
-                        requisicion.estado = 'A'  # Cambiar a Aprobada
-                    else:
-                        messages.error(request, 'El archivo de aprobación no puede exceder 5MB')
+            if archivo_aprobacion:
+                if archivo_aprobacion.name.lower().endswith('.pdf') and archivo_aprobacion.size <= 5 * 1024 * 1024:
+                    requisicion.archivo_aprobacion = archivo_aprobacion
+                    requisicion.estado = 'A'
                 else:
-                    messages.error(request, 'El archivo de aprobación debe ser PDF')
+                    messages.error(request, 'El archivo de aprobación debe ser PDF y menor a 5MB')
 
             requisicion.save()
-            messages.success(request, f'Requisición {codigo} creada exitosamente!')
+            messages.success(request, f'Requisición {codigo} creada exitosamente')
             return True
-            
+
+        except User_com.DoesNotExist:
+            messages.error(request, 'Usuario de compras no válido')
+            return False
         except Exception as e:
             messages.error(request, f'Error al crear requisición: {str(e)}')
             return False
@@ -67,29 +69,36 @@ class RequisicionService:
     @staticmethod
     def editar_requisicion(request, user):
         req_id = request.POST.get('req_id')
-        
         try:
             req = Requisicion.objects.get(id=req_id)
-            
-            # Verificar permisos
-            if req.usuario != user:
+
+            # Permisos: User_com solo si es el asignado, User_req solo si es el creador
+            if hasattr(user, 'nombre') and req.creador_req != user.nombre:
                 messages.error(request, 'No tienes permiso para editar esta requisición')
                 return False
-            
+            if hasattr(user, 'user_com') and req.usuario != user:
+                messages.error(request, 'No tienes permiso para editar esta requisición')
+                return False
+
             # Obtener datos del formulario
             codigo = request.POST.get('codigo', '').strip()
             fecha_requerida = request.POST.get('fecha_requerida')
             descripcion = request.POST.get('descripcion', '').strip()
-            
+            usuario_com_id = request.POST.get('usuario_com')
+
             # Validaciones
             if not codigo:
                 messages.error(request, 'El código es obligatorio')
                 return False
-                
             if codigo != req.codigo and Requisicion.objects.filter(codigo=codigo).exists():
                 messages.error(request, 'El código ya está en uso')
                 return False
-            
+
+            # Actualizar usuario de compras si se envía
+            if usuario_com_id:
+                usuario_com = User_com.objects.get(id=usuario_com_id)
+                req.usuario = usuario_com
+
             # Manejo de archivos
             if 'archivo' in request.FILES:
                 archivo = request.FILES['archivo']
@@ -99,27 +108,26 @@ class RequisicionService:
                     req.archivo = archivo
                 else:
                     messages.error(request, 'El archivo de requisición debe ser PDF y menor a 5MB')
-            
-            # Manejo de archivo de aprobación
+
             if 'archivo_aprobacion' in request.FILES:
                 archivo_aprobacion = request.FILES['archivo_aprobacion']
                 if archivo_aprobacion.name.lower().endswith('.pdf') and archivo_aprobacion.size <= 5 * 1024 * 1024:
                     if req.archivo_aprobacion:
                         req.archivo_aprobacion.delete()
                     req.archivo_aprobacion = archivo_aprobacion
-                    req.estado = 'A'  # Cambiar a Aprobada
+                    req.estado = 'A'
                 else:
                     messages.error(request, 'El archivo de aprobación debe ser PDF y menor a 5MB')
-            
+
             # Actualizar campos
             req.codigo = codigo
             req.fecha_requerida = fecha_requerida
             req.descripcion = descripcion
             req.save()
-            
+
             messages.success(request, f'Requisición {codigo} actualizada exitosamente!')
             return True
-            
+
         except Requisicion.DoesNotExist:
             messages.error(request, 'Requisición no encontrada')
             return False
@@ -130,32 +138,29 @@ class RequisicionService:
     @staticmethod
     def eliminar_requisicion(request, user):
         req_id = request.POST.get('req_id')
-        
         try:
             req = Requisicion.objects.get(id=req_id)
-            
-            # Verificar permisos (solo el dueño puede eliminar)
-            if req.usuario != user:
+
+            # Permisos: User_com solo si es el asignado, User_req solo si es el creador
+            if hasattr(user, 'nombre') and req.creador_req != user.nombre:
                 messages.error(request, 'No tienes permiso para eliminar esta requisición')
                 return False
-                
-            # Guardar código para el mensaje
+            if hasattr(user, 'user_com') and req.usuario != user:
+                messages.error(request, 'No tienes permiso para eliminar esta requisición')
+                return False
+
             codigo = req.codigo
-            
-            # Eliminar el archivo físico primero
             if req.archivo:
                 try:
                     default_storage.delete(req.archivo.path)
                 except Exception as e:
                     messages.error(request, f'Error al eliminar el archivo: {str(e)}')
                     return False
-            
-            # Eliminar el registro de la base de datos
+
             req.delete()
-            
             messages.success(request, f'Requisición {codigo} eliminada exitosamente!')
             return True
-            
+
         except Requisicion.DoesNotExist:
             messages.error(request, 'Requisición no encontrada')
             return False
@@ -309,15 +314,15 @@ class OrdenCompraService:
                     raise ValidationError('El proveedor seleccionado no existe en el sistema')
                 orden.proveedor = proveedor_info
 
-            # Actualizar fecha de entrega si se envió
+            # Actualizar fecha de entrega si se envía
             if fecha_entrega:
                 orden.fecha_entrega_esperada = fecha_entrega
 
-            # Actualizar descripción si se envió
+            # Actualizar descripción si se envía
             if descripcion:
                 orden.descripcion = descripcion
 
-            # Actualizar estado si se envió
+            # Actualizar estado si se envía
             if estado:
                 orden.estado = estado
 

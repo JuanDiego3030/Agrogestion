@@ -32,6 +32,7 @@ class Requisicion(models.Model):
     descripcion = models.TextField(max_length=500, blank=True, null=True)
     estado = models.CharField(max_length=1, choices=ESTADOS, default='P')
     usuario = models.ForeignKey(User_com, on_delete=models.CASCADE)
+    creador_req = models.CharField(max_length=100, blank=True, null=True)  # Nuevo campo
     
     class Meta:
         ordering = ['-fecha_registro']

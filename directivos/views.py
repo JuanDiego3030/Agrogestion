@@ -94,8 +94,8 @@ def firmar_requisicion(request, req_id):
         firma_height = 1.5 * cm
         # Posición: centrado en la parte inferior
         page_width, page_height = letter
-        x = (page_width - firma_width) / 2
-        y = 1.5 * cm  # 1.5 cm desde abajo
+        x = (page_width - firma_width) / 2.5
+        y = 2.7 * cm  # 2.7 cm desde abajo
         can.drawImage(firma_path, x, y, width=firma_width, height=firma_height, mask='auto')
         can.save()
         packet.seek(0)

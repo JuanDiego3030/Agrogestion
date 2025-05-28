@@ -64,22 +64,19 @@ def compras_requisiciones(request):
         
     if request.method == 'POST':
         accion = request.POST.get('accion')
-        
         if accion == 'crear':
             if RequisicionService.crear_requisicion(request, user):
                 return redirect('compras_requisiciones')
-        
         elif accion == 'editar':
             if RequisicionService.editar_requisicion(request, user):
                 return redirect('compras_requisiciones')
-        
         elif accion == 'eliminar':
             if RequisicionService.eliminar_requisicion(request, user):
                 return redirect('compras_requisiciones')
-        
         return redirect('compras_requisiciones')
     
-    requisiciones = Requisicion.objects.all().order_by('-fecha_registro')
+    # Solo mostrar las requisiciones asignadas al usuario de compras logueado
+    requisiciones = Requisicion.objects.filter(usuario=user).order_by('-fecha_registro')
 
     buscar = request.GET.get('buscar', '').strip()
     estado = request.GET.get('estado', '').strip()
