@@ -89,6 +89,7 @@
                                     <th>Fecha Registro</th>
                                     <th>Fecha Requerida</th>
                                     <th>Estado</th>
+                                    <th>Importancia</th>
                                     <th>Acción</th>
                                 </tr>
                             </thead>
@@ -126,6 +127,13 @@
                                             {% else %}bg-danger{% endif %}">
                                             {{ req.get_estado_display }}
                                         </span>
+                                    </td>
+                                    <td>
+                                        {% if req.importancia == 'U' %}
+                                            <span class="badge bg-danger">Urgente</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Normal</span>
+                                        {% endif %}
                                     </td>
                                     <td>
                                         <!-- Solo botón de editar si aplica -->

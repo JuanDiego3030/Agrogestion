@@ -3,7 +3,7 @@ from compras.models import Requisicion, User_com
 from requisitores.models import User_req  # Importa si es necesario
 from datetime import datetime
 from django.core.files.storage import default_storage
-
+from directivos.models import User_dir
 
 class RequisicionService:
     @staticmethod
@@ -15,9 +15,11 @@ class RequisicionService:
             archivo = request.FILES.get('archivo')
             usuario_com_id = request.POST.get('usuario_com')
             archivo_aprobacion = request.FILES.get('archivo_aprobacion')
+            importancia = request.POST.get('importancia', 'N')
+            directivo_id = request.POST.get('directivo_id')
 
             # Validaciones básicas
-            if not all([codigo, fecha_requerida, archivo]):
+            if not all([codigo, fecha_requerida, archivo, importancia, directivo_id]):
                 messages.error(request, 'Todos los campos obligatorios deben estar completos')
                 return False
 
@@ -34,13 +36,22 @@ class RequisicionService:
                 messages.error(request, 'Debe seleccionar un usuario de compras')
                 return False
 
+            # Obtener directivo
+            try:
+                directivo = User_dir.objects.get(id=directivo_id)
+            except User_dir.DoesNotExist:
+                messages.error(request, 'Directivo seleccionado no existe')
+                return False
+
             requisicion = Requisicion(
                 codigo=codigo,
                 archivo=archivo,
                 fecha_requerida=fecha_requerida,
                 descripcion=descripcion,
                 usuario=usuario_com,
-                estado='P'
+                estado='P',
+                importancia=importancia,
+                directivo=directivo
             )
 
             # Si el usuario es User_req, guarda el nombre como creador
@@ -85,6 +96,8 @@ class RequisicionService:
             fecha_requerida = request.POST.get('fecha_requerida')
             descripcion = request.POST.get('descripcion', '').strip()
             usuario_com_id = request.POST.get('usuario_com')
+            importancia = request.POST.get('importancia', 'N')
+            directivo_id = request.POST.get('directivo_id')
 
             # Validaciones
             if not codigo:
@@ -98,6 +111,19 @@ class RequisicionService:
             if usuario_com_id:
                 usuario_com = User_com.objects.get(id=usuario_com_id)
                 req.usuario = usuario_com
+
+            # Actualizar importancia
+            if importancia in dict(Requisicion.IMPORTANCIA_CHOICES):
+                req.importancia = importancia
+
+            # Actualizar directivo
+            if directivo_id:
+                try:
+                    directivo = User_dir.objects.get(id=directivo_id)
+                    req.directivo = directivo
+                except User_dir.DoesNotExist:
+                    messages.error(request, 'Directivo seleccionado no existe')
+                    return False
 
             # Manejo de archivos
             if 'archivo' in request.FILES:
@@ -307,7 +333,7 @@ class OrdenCompraService:
                     raise ValidationError('El código ya está en uso')
                 orden.codigo = codigo
 
-            # Procesar proveedor solo si se envió uno nuevo
+            # Procesar proveedor solo si se envía uno nuevo
             if proveedor_info:
                 proveedor = OrdenCompraService.obtener_proveedor_desde_formulario(proveedor_info)
                 if not Proveedor.objects.using('sqlserver').filter(co_prov=proveedor['codigo']).exists():

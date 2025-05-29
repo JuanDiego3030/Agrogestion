@@ -49,7 +49,7 @@ def directivos_requisiciones(request):
         messages.error(request, 'Usuario no encontrado')
         return redirect('directivos_login')
 
-    requisiciones = Requisicion.objects.all().order_by('-fecha_registro')
+    requisiciones = Requisicion.objects.filter(directivo=user).order_by('-fecha_registro')
 
     buscar = request.GET.get('buscar', '').strip()
     estado = request.GET.get('estado', '').strip()

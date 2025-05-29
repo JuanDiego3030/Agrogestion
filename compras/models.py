@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.hashers import make_password, check_password
 from django.dispatch import receiver
 from django.db.models.signals import pre_delete
+from directivos.models import User_dir
 
 class User_com(models.Model):
     nombre = models.CharField(max_length=100, unique=True)
@@ -33,6 +34,12 @@ class Requisicion(models.Model):
     estado = models.CharField(max_length=1, choices=ESTADOS, default='P')
     usuario = models.ForeignKey(User_com, on_delete=models.CASCADE)
     creador_req = models.CharField(max_length=100, blank=True, null=True)  # Nuevo campo
+    IMPORTANCIA_CHOICES = (
+        ('N', 'Normal'),
+        ('U', 'Urgente'),
+    )
+    importancia = models.CharField(max_length=1, choices=IMPORTANCIA_CHOICES, default='N')
+    directivo = models.ForeignKey(User_dir, on_delete=models.PROTECT, related_name='requisiciones_recibidas', null=True, blank=True)
     
     class Meta:
         ordering = ['-fecha_registro']

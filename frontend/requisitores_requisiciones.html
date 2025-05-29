@@ -87,6 +87,8 @@
                                     <th>Aprobación</th>
                                     <th>Fecha Registro</th>
                                     <th>Fecha Requerida</th>
+                                    <th><strong>Importancia</strong></th> <!-- Nueva columna -->
+                                    <th>Directivo</th> <!-- Nueva columna -->
                                     <th>Estado</th>
                                     <th>Acciones</th>
                                 </tr>
@@ -119,6 +121,20 @@
                                     </td>
                                     <td>{{ req.fecha_registro|date:"d/m/Y" }}</td>
                                     <td>{{ req.fecha_requerida|date:"d/m/Y" }}</td>
+                                    <td>
+                                        {% if req.importancia == 'U' %}
+                                            <span class="badge bg-danger">Urgente</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Normal</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if req.directivo %}
+                                            {{ req.directivo.nombre }}
+                                        {% else %}
+                                            <span class="text-muted">Sin asignar</span>
+                                        {% endif %}
+                                    </td>
                                     <td>
                                         <span class="badge 
                                             {% if req.estado == 'P' %}bg-warning
@@ -200,6 +216,22 @@
                             {% endfor %}
                         </select>
                     </div>
+                    <div class="mb-3">
+                        <label class="form-label">Importancia:</label>
+                        <select name="importancia" class="form-select" required>
+                            <option value="N">Normal</option>
+                            <option value="U">Urgente</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Directivo destinatario:</label>
+                        <select name="directivo_id" class="form-select" required>
+                            <option value="">Seleccione un directivo</option>
+                            {% for d in directivos %}
+                            <option value="{{ d.id }}">{{ d.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -264,6 +296,22 @@
                             <option value="">Seleccione usuario de compras</option>
                             {% for u in usuarios_compras %}
                                 <option value="{{ u.id }}" {% if req.usuario.id == u.id %}selected{% endif %}>{{ u.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Importancia:</label>
+                        <select name="importancia" class="form-select" required>
+                            <option value="N" {% if req.importancia == 'N' %}selected{% endif %}>Normal</option>
+                            <option value="U" {% if req.importancia == 'U' %}selected{% endif %}>Urgente</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="directivo_id_{{ req.id }}" class="form-label">Directivo destinatario</label>
+                        <select name="directivo_id" id="directivo_id_{{ req.id }}" class="form-select" required>
+                            <option value="">Seleccione un directivo</option>
+                            {% for d in directivos %}
+                                <option value="{{ d.id }}" {% if req.directivo.id == d.id %}selected{% endif %}>{{ d.nombre }}</option>
                             {% endfor %}
                         </select>
                     </div>

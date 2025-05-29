@@ -1,10 +1,11 @@
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from .models import User_req
-from compras.models import Requisicion, User_com
+from compras.models import Requisicion, User_com, OrdenCompra
 from compras.compras import RequisicionService
 from django.views.decorators.cache import never_cache
 from django.contrib.auth.hashers import check_password
+from directivos.models import User_dir
 
 def requisitores_login(request):
     if request.method == 'POST':
@@ -42,19 +43,27 @@ def requisitores_requisiciones(request):
         messages.error(request, 'Usuario no encontrado')
         return redirect('requisitores_login')
 
-    # Gestión de acciones POST
+    # --- CRUD ---
     if request.method == 'POST':
         accion = request.POST.get('accion')
         if accion == 'crear':
             if RequisicionService.crear_requisicion(request, user):
-                return redirect('requisitores_requisiciones')
+                messages.success(request, 'Requisición creada correctamente')
+            else:
+                messages.error(request, 'No se pudo crear la requisición')
+            return redirect('requisitores_requisiciones')
         elif accion == 'editar':
             if RequisicionService.editar_requisicion(request, user):
-                return redirect('requisitores_requisiciones')
+                messages.success(request, 'Requisición editada correctamente')
+            else:
+                messages.error(request, 'No se pudo editar la requisición')
+            return redirect('requisitores_requisiciones')
         elif accion == 'eliminar':
             if RequisicionService.eliminar_requisicion(request, user):
-                return redirect('requisitores_requisiciones')
-        return redirect('requisitores_requisiciones')
+                messages.success(request, 'Requisición eliminada correctamente')
+            else:
+                messages.error(request, 'No se pudo eliminar la requisición')
+            return redirect('requisitores_requisiciones')
 
     # Solo mostrar las requisiciones creadas por el requisitor logueado
     requisiciones = Requisicion.objects.filter(creador_req=user.nombre).order_by('-fecha_registro')
@@ -68,10 +77,17 @@ def requisitores_requisiciones(request):
         requisiciones = requisiciones.filter(estado=estado)
 
     usuarios_compras = User_com.objects.all().order_by('nombre')
+    directivos = User_dir.objects.all()
+
+    requisiciones_ids = requisiciones.values_list('id', flat=True)
+    ordenes = OrdenCompra.objects.filter(requisicion_id__in=requisiciones_ids).order_by('-fecha_creacion')
+
     return render(request, 'requisitores_requisiciones.html', {
         'user': user,
         'requisiciones': requisiciones,
         'usuarios_compras': usuarios_compras,
+        'directivos': directivos,
+        'ordenes': ordenes,
     })
 
 def index(request):

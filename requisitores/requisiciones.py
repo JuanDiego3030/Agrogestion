@@ -1,4 +1,4 @@
-from compras.models import Requisicion, User_com
+from compras.models import Requisicion, User_com, User_dir
 from django.core.exceptions import ValidationError
 from django.contrib import messages
 from django.db import transaction
@@ -14,6 +14,9 @@ class RequisicionService:
             descripcion = request.POST.get('descripcion', '').strip()
             usuario_com_id = request.POST.get('usuario_com')
             archivo = request.FILES.get('archivo')
+            importancia = request.POST.get('importancia', 'N')
+            directivo_id = request.POST.get('directivo_id')
+            directivo = User_dir.objects.get(id=directivo_id) if directivo_id else None
 
             if not all([codigo, fecha_requerida, usuario_com_id, archivo]):
                 messages.error(request, 'Todos los campos son obligatorios')
@@ -31,7 +34,9 @@ class RequisicionService:
                 descripcion=descripcion,
                 usuario=usuario_com,           # Usuario de compras asignado
                 creador_req=user.nombre,       # Nombre del requisitor
-                archivo=archivo
+                archivo=archivo,
+                importancia=importancia,
+                directivo=directivo,
             )
             req.save()
             messages.success(request, f'Requisición {codigo} creada exitosamente')
@@ -61,6 +66,9 @@ class RequisicionService:
             codigo = request.POST.get('codigo', '').strip()
             fecha_requerida = request.POST.get('fecha_requerida')
             descripcion = request.POST.get('descripcion', '').strip()
+            importancia = request.POST.get('importancia', 'N')
+            directivo_id = request.POST.get('directivo_id')
+            directivo = User_dir.objects.get(id=directivo_id) if directivo_id else None
             
             # Validaciones
             if not codigo:
@@ -96,6 +104,8 @@ class RequisicionService:
             req.codigo = codigo
             req.fecha_requerida = fecha_requerida
             req.descripcion = descripcion
+            req.importancia = importancia
+            req.directivo = directivo
             req.save()
             
             messages.success(request, f'Requisición {codigo} actualizada exitosamente!')
