@@ -14,40 +14,6 @@ from django.http import FileResponse, HttpResponse
 from django.conf import settings
 
 
-def compras_login(request):
-    if request.method == 'POST':
-        nombre = request.POST.get('nombre', '').strip()  # Limpiamos espacios en blanco
-        password = request.POST.get('password', '')
-
-        # Verificación básica de campos vacíos
-        if not nombre or not password:
-            messages.error(request, 'Por favor complete todos los campos')
-            return redirect('compras_login')
-
-        try:
-            # Usamos get() con el nombre exacto (case sensitive)
-            user_com = User_com.objects.get(nombre__exact=nombre)
-            
-            # Verificar si el usuario está bloqueado
-            if user_com.bloqueado:
-                messages.error(request, 'Este usuario está bloqueado. Contacte al administrador.')
-                return redirect('compras_login')
-            
-            # Verificar la contraseña
-            if check_password(password, user_com.password):
-                request.session['user_com_id'] = user_com.id
-                request.session['user_com_nombre'] = user_com.nombre
-                return redirect('compras_requisiciones')  # Asegúrate que esta URL está definida
-            else:
-                messages.error(request, 'Contraseña incorrecta')
-        except User_com.DoesNotExist:
-            messages.error(request, 'Usuario no existe')
-        except Exception as e:
-            # Para propósitos de depuración durante desarrollo
-            messages.error(request, f'Error en el sistema: {str(e)}')
-    
-    return render(request, 'compras_login.html')
-
 @never_cache
 def compras_requisiciones(request):
     # Verificar sesión
@@ -204,4 +170,4 @@ def ver_pdf(request, doc_type, doc_id):
     
 def logout(request):
     request.session.flush()  # Eliminar todas las sesiones
-    return redirect('compras_login')  # Redirigir a la página de inicio
+    return redirect('index')  # Redirigir a la página de inicio

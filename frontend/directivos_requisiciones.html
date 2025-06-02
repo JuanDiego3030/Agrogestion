@@ -24,7 +24,7 @@
                 <a href="{% url 'directivos_ordenes' %}" class="list-group-item list-group-item-action bg-dark text-white {% if request.resolver_match.url_name == 'directivos_ordenes' %}active{% endif %}">
                     <i class="fas fa-file-contract me-2"></i>Órdenes de Compra
                 </a>
-                <a href="{% url 'directivos_login' %}?logout=1" class="list-group-item list-group-item-action bg-dark text-white">
+                <a href="{% url 'logout' %}?logout=1" class="list-group-item list-group-item-action bg-dark text-white">
                     <i class="fas fa-power-off me-2"></i>Cerrar Sesión
                 </a>
             </div>

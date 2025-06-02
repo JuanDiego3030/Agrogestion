@@ -23,10 +23,21 @@
                 <h5>Admin - {{ user_admin.nombre }}</h5>
             </div>
             <div class="list-group list-group-flush">
-                <a href="{% url 'gestion_admin_usuarios' %}" class="list-group-item list-group-item-action bg-dark text-white active">
-                    <i class="fas fa-users-cog me-2"></i>Gestión de Usuarios
+                <div class="px-3 pt-3 pb-1 text-uppercase small text-secondary">Usuarios</div>
+                <a href="{% url 'gestion_admin_usuarios' %}?tipo=com" class="list-group-item list-group-item-action bg-dark text-white">
+                    <i class="fas fa-briefcase me-2"></i>Compras
                 </a>
-                <a href="{% url 'gestion_admin_login' %}?logout=1" class="list-group-item list-group-item-action bg-dark text-white">
+                <a href="{% url 'gestion_admin_usuarios' %}?tipo=req" class="list-group-item list-group-item-action bg-dark text-white">
+                    <i class="fas fa-user-edit me-2"></i>Requisitores
+                </a>
+                <a href="{% url 'gestion_admin_usuarios' %}?tipo=dir" class="list-group-item list-group-item-action bg-dark text-white">
+                    <i class="fas fa-user-tie me-2"></i>Directivos
+                </a>
+                <div class="px-3 pt-3 pb-1 text-uppercase small text-secondary">Administración</div>
+                <a href="{% url 'gestion_admin_usuarios' %}?tipo=admin" class="list-group-item list-group-item-action bg-dark text-white">
+                    <i class="fas fa-user-shield me-2"></i>Administradores
+                </a>
+                <a href="{% url 'logout' %}?logout=1" class="list-group-item list-group-item-action bg-dark text-white mt-3">
                     <i class="fas fa-power-off me-2"></i>Cerrar Sesión
                 </a>
             </div>
@@ -236,7 +247,7 @@
                                 <div class="modal fade" id="editarUsuarioModal_dir_{{ u.id }}" tabindex="-1">
                                     <div class="modal-dialog">
                                         <div class="modal-content">
-                                            <form method="post">
+                                            <form method="post" enctype="multipart/form-data">
                                                 {% csrf_token %}
                                                 <input type="hidden" name="accion" value="editar">
                                                 <input type="hidden" name="tipo" value="dir">
@@ -253,6 +264,11 @@
                                                     <div class="mb-3">
                                                         <label class="form-label">Nueva Contraseña (opcional):</label>
                                                         <input type="password" name="password" class="form-control">
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <label class="form-label">Firma (imagen):</label>
+                                                        <input type="file" name="firma" class="form-control" accept="image/*">
+                                                        <div class="form-text">Opcional. Solo para directivos.</div>
                                                     </div>
                                                 </div>
                                                 <div class="modal-footer">
@@ -343,7 +359,7 @@
 <div class="modal fade" id="crearUsuarioModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form method="post">
+            <form method="post" enctype="multipart/form-data">
                 {% csrf_token %}
                 <input type="hidden" name="accion" value="crear">
                 <div class="modal-header">
@@ -353,7 +369,7 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">Tipo de Usuario:</label>
-                        <select name="tipo" class="form-select" required>
+                        <select name="tipo" class="form-select" id="tipoUsuarioSelect" required>
                             <option value="">Seleccione...</option>
                             <option value="com">Compras</option>
                             <option value="req">Requisitor</option>
@@ -369,6 +385,12 @@
                         <label class="form-label">Contraseña:</label>
                         <input type="password" name="password" class="form-control" required>
                     </div>
+                    <!-- Campo de firma solo para directivo -->
+                    <div class="mb-3" id="firmaField" style="display:none;">
+                        <label class="form-label">Firma (imagen):</label>
+                        <input type="file" name="firma" class="form-control" accept="image/*">
+                        <div class="form-text">Solo para directivos.</div>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
@@ -379,5 +401,18 @@
     </div>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const tipoSelect = document.getElementById('tipoUsuarioSelect');
+    const firmaField = document.getElementById('firmaField');
+    tipoSelect.addEventListener('change', function() {
+        if (this.value === 'dir') {
+            firmaField.style.display = 'block';
+        } else {
+            firmaField.style.display = 'none';
+        }
+    });
+});
+</script>
 </body>
 </html>

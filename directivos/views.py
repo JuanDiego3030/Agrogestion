@@ -204,3 +204,7 @@ def firmar_orden(request, orden_id):
     else:
         messages.info(request, 'La orden ya fue aprobada o negada.')
     return redirect('directivos_ordenes')
+
+def logout(request):
+    request.session.flush()  # Eliminar todas las sesiones
+    return redirect('index')

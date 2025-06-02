@@ -1,43 +1,94 @@
 from django.shortcuts import render, redirect
-from .models import UserAdmin
+from django.contrib import messages
+from django.contrib.auth.hashers import check_password, make_password
 from compras.models import User_com
 from requisitores.models import User_req
 from directivos.models import User_dir
-from django.contrib import messages
+from gestion_admin.models import UserAdmin
 
 def index(request):
-    return render(request, 'index.html')
-
-def admin_login(request):
     if request.method == 'POST':
         nombre = request.POST.get('nombre', '').strip()
         password = request.POST.get('password', '')
+
+        # Admin
         try:
             user = UserAdmin.objects.get(nombre=nombre)
-            if user.bloqueado:
+            if hasattr(user, 'bloqueado') and user.bloqueado:
                 messages.error(request, 'Usuario bloqueado')
-            elif user.check_password(password):
+            elif check_password(password, user.password):
                 request.session['user_admin_id'] = user.id
                 return redirect('gestion_admin_usuarios')
             else:
                 messages.error(request, 'Contraseña incorrecta')
+            return render(request, 'index.html')
         except UserAdmin.DoesNotExist:
-            messages.error(request, 'Usuario no existe')
-    return render(request, 'admin_login.html')
+            pass
+
+        # Directivo
+        try:
+            user = User_dir.objects.get(nombre=nombre)
+            if hasattr(user, 'bloqueado') and user.bloqueado:
+                messages.error(request, 'Usuario bloqueado')
+            elif check_password(password, user.password):
+                request.session['user_dir_id'] = user.id
+                return redirect('directivos_requisiciones')
+            else:
+                messages.error(request, 'Contraseña incorrecta')
+            return render(request, 'index.html')
+        except User_dir.DoesNotExist:
+            pass
+
+        # Compras
+        try:
+            user = User_com.objects.get(nombre=nombre)
+            if hasattr(user, 'bloqueado') and user.bloqueado:
+                messages.error(request, 'Usuario bloqueado')
+            elif check_password(password, user.password):
+                request.session['user_com_id'] = user.id
+                return redirect('compras_requisiciones')
+            else:
+                messages.error(request, 'Contraseña incorrecta')
+            return render(request, 'index.html')
+        except User_com.DoesNotExist:
+            pass
+
+        # Requisitor
+        try:
+            user = User_req.objects.get(nombre=nombre)
+            if hasattr(user, 'bloqueado') and user.bloqueado:
+                messages.error(request, 'Usuario bloqueado')
+            elif check_password(password, user.password):
+                request.session['user_req_id'] = user.id
+                return redirect('requisitores_requisiciones')
+            else:
+                messages.error(request, 'Contraseña incorrecta')
+            return render(request, 'index.html')
+        except User_req.DoesNotExist:
+            pass
+
+        messages.error(request, 'Usuario no existe')
+    return render(request, 'index.html')
 
 def gestion_usuarios(request):
     if not request.session.get('user_admin_id'):
         return redirect('gestion_admin_login')
 
-    # CRUD
+    tipo = request.GET.get('tipo', 'com')  # Por defecto muestra compras
+
+    usuarios_com = User_com.objects.all() if tipo == 'com' else []
+    usuarios_req = User_req.objects.all() if tipo == 'req' else []
+    usuarios_dir = User_dir.objects.all() if tipo == 'dir' else []
+    usuarios_admin = UserAdmin.objects.all() if tipo == 'admin' else []
+
     if request.method == 'POST':
         accion = request.POST.get('accion')
         tipo = request.POST.get('tipo')
         user_id = request.POST.get('user_id')
         nombre = request.POST.get('nombre')
         password = request.POST.get('password')
+        firma = request.FILES.get('firma')  # <-- Nuevo: archivo de firma
 
-        # Selección de modelo según tipo
         modelos = {
             'com': User_com,
             'req': User_req,
@@ -51,11 +102,12 @@ def gestion_usuarios(request):
                 messages.error(request, 'El usuario ya existe')
             else:
                 obj = Modelo(nombre=nombre)
+                # Guardar firma si es directivo
+                if tipo == 'dir' and firma:
+                    obj.firma = firma
+                # Guardar contraseña encriptada
                 if password:
-                    if hasattr(obj, 'set_password'):
-                        obj.set_password(password)
-                    else:
-                        obj.password = password
+                    obj.password = make_password(password)
                 obj.save()
                 messages.success(request, 'Usuario creado correctamente')
             return redirect('gestion_admin_usuarios')
@@ -64,11 +116,12 @@ def gestion_usuarios(request):
             try:
                 obj = Modelo.objects.get(id=user_id)
                 obj.nombre = nombre
+                # Actualizar firma si es directivo y se sube nueva
+                if tipo == 'dir' and firma:
+                    obj.firma = firma
+                # Actualizar contraseña encriptada si se proporciona
                 if password:
-                    if hasattr(obj, 'set_password'):
-                        obj.set_password(password)
-                    else:
-                        obj.password = password
+                    obj.password = make_password(password)
                 obj.save()
                 messages.success(request, 'Usuario actualizado')
             except Modelo.DoesNotExist:
@@ -94,15 +147,16 @@ def gestion_usuarios(request):
                 messages.error(request, 'Usuario no encontrado')
             return redirect('gestion_admin_usuarios')
 
-    usuarios_com = User_com.objects.all()
-    usuarios_req = User_req.objects.all()
-    usuarios_dir = User_dir.objects.all()
-    usuarios_admin = UserAdmin.objects.all()
     user_admin = UserAdmin.objects.get(id=request.session['user_admin_id'])
     return render(request, 'admin.html', {
+        'user_admin': user_admin,
         'usuarios_com': usuarios_com,
         'usuarios_req': usuarios_req,
         'usuarios_dir': usuarios_dir,
         'usuarios_admin': usuarios_admin,
-        'user_admin': user_admin,
+        'tipo': tipo,
     })
+
+def logout(request):
+    request.session.flush()  # Eliminar todas las sesiones
+    return redirect('index')

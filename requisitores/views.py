@@ -94,6 +94,5 @@ def index(request):
     return render('index.html')
 
 def logout(request):
-    request.session.flush()  # Elimina todos los datos de la sesión
-    messages.success(request, 'Has cerrado sesión exitosamente')
-    return redirect('requisitores_login')
+    request.session.flush()  # Eliminar todas las sesiones
+    return redirect('index') 
