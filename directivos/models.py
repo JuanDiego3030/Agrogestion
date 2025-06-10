@@ -6,6 +6,7 @@ class User_dir(models.Model):
     password = models.CharField(max_length=128)
     bloqueado = models.BooleanField(default=False)
     firma = models.ImageField(upload_to='firmas/', null=True, blank=True)  # Nueva línea
+    email = models.EmailField(max_length=150, unique=True, null=True, blank=True)  # Nuevo campo
 
     def __str__(self):
         return self.nombre

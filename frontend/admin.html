@@ -109,37 +109,6 @@
                                         </form>
                                     </td>
                                 </tr>
-                                <!-- Modal Editar Usuario Compras -->
-                                <div class="modal fade" id="editarUsuarioModal_com_{{ u.id }}" tabindex="-1">
-                                    <div class="modal-dialog">
-                                        <div class="modal-content">
-                                            <form method="post">
-                                                {% csrf_token %}
-                                                <input type="hidden" name="accion" value="editar">
-                                                <input type="hidden" name="tipo" value="com">
-                                                <input type="hidden" name="user_id" value="{{ u.id }}">
-                                                <div class="modal-header">
-                                                    <h5 class="modal-title">Editar Usuario Compras</h5>
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                </div>
-                                                <div class="modal-body">
-                                                    <div class="mb-3">
-                                                        <label class="form-label">Nombre:</label>
-                                                        <input type="text" name="nombre" class="form-control" value="{{ u.nombre }}" required>
-                                                    </div>
-                                                    <div class="mb-3">
-                                                        <label class="form-label">Nueva Contraseña (opcional):</label>
-                                                        <input type="password" name="password" class="form-control">
-                                                    </div>
-                                                </div>
-                                                <div class="modal-footer">
-                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                                    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
-                                                </div>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
                                 {% endfor %}
                                 {% for u in usuarios_req %}
                                 <tr>
@@ -176,37 +145,6 @@
                                         </form>
                                     </td>
                                 </tr>
-                                <!-- Modal Editar Usuario Requisitor -->
-                                <div class="modal fade" id="editarUsuarioModal_req_{{ u.id }}" tabindex="-1">
-                                    <div class="modal-dialog">
-                                        <div class="modal-content">
-                                            <form method="post">
-                                                {% csrf_token %}
-                                                <input type="hidden" name="accion" value="editar">
-                                                <input type="hidden" name="tipo" value="req">
-                                                <input type="hidden" name="user_id" value="{{ u.id }}">
-                                                <div class="modal-header">
-                                                    <h5 class="modal-title">Editar Usuario Requisitor</h5>
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                </div>
-                                                <div class="modal-body">
-                                                    <div class="mb-3">
-                                                        <label class="form-label">Nombre:</label>
-                                                        <input type="text" name="nombre" class="form-control" value="{{ u.nombre }}" required>
-                                                    </div>
-                                                    <div class="mb-3">
-                                                        <label class="form-label">Nueva Contraseña (opcional):</label>
-                                                        <input type="password" name="password" class="form-control">
-                                                    </div>
-                                                </div>
-                                                <div class="modal-footer">
-                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                                    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
-                                                </div>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
                                 {% endfor %}
                                 {% for u in usuarios_dir %}
                                 <tr>
@@ -243,42 +181,6 @@
                                         </form>
                                     </td>
                                 </tr>
-                                <!-- Modal Editar Usuario Directivo -->
-                                <div class="modal fade" id="editarUsuarioModal_dir_{{ u.id }}" tabindex="-1">
-                                    <div class="modal-dialog">
-                                        <div class="modal-content">
-                                            <form method="post" enctype="multipart/form-data">
-                                                {% csrf_token %}
-                                                <input type="hidden" name="accion" value="editar">
-                                                <input type="hidden" name="tipo" value="dir">
-                                                <input type="hidden" name="user_id" value="{{ u.id }}">
-                                                <div class="modal-header">
-                                                    <h5 class="modal-title">Editar Usuario Directivo</h5>
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                </div>
-                                                <div class="modal-body">
-                                                    <div class="mb-3">
-                                                        <label class="form-label">Nombre:</label>
-                                                        <input type="text" name="nombre" class="form-control" value="{{ u.nombre }}" required>
-                                                    </div>
-                                                    <div class="mb-3">
-                                                        <label class="form-label">Nueva Contraseña (opcional):</label>
-                                                        <input type="password" name="password" class="form-control">
-                                                    </div>
-                                                    <div class="mb-3">
-                                                        <label class="form-label">Firma (imagen):</label>
-                                                        <input type="file" name="firma" class="form-control" accept="image/*">
-                                                        <div class="form-text">Opcional. Solo para directivos.</div>
-                                                    </div>
-                                                </div>
-                                                <div class="modal-footer">
-                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                                    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
-                                                </div>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
                                 {% endfor %}
                                 {% for u in usuarios_admin %}
                                 <tr>
@@ -315,37 +217,6 @@
                                         </form>
                                     </td>
                                 </tr>
-                                <!-- Modal Editar Usuario Admin -->
-                                <div class="modal fade" id="editarUsuarioModal_admin_{{ u.id }}" tabindex="-1">
-                                    <div class="modal-dialog">
-                                        <div class="modal-content">
-                                            <form method="post">
-                                                {% csrf_token %}
-                                                <input type="hidden" name="accion" value="editar">
-                                                <input type="hidden" name="tipo" value="admin">
-                                                <input type="hidden" name="user_id" value="{{ u.id }}">
-                                                <div class="modal-header">
-                                                    <h5 class="modal-title">Editar Usuario Admin</h5>
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                </div>
-                                                <div class="modal-body">
-                                                    <div class="mb-3">
-                                                        <label class="form-label">Nombre:</label>
-                                                        <input type="text" name="nombre" class="form-control" value="{{ u.nombre }}" required>
-                                                    </div>
-                                                    <div class="mb-3">
-                                                        <label class="form-label">Nueva Contraseña (opcional):</label>
-                                                        <input type="password" name="password" class="form-control">
-                                                    </div>
-                                                </div>
-                                                <div class="modal-footer">
-                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                                    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
-                                                </div>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
                                 {% endfor %}
                             </tbody>
                         </table>
@@ -385,11 +256,35 @@
                         <label class="form-label">Contraseña:</label>
                         <input type="password" name="password" class="form-control" required>
                     </div>
+                    <div class="mb-3">
+                        <label class="form-label">Correo electrónico:</label>
+                        <input type="email" name="email" class="form-control" value="{{ u.email|default_if_none:'' }}" required>
+                    </div>
                     <!-- Campo de firma solo para directivo -->
                     <div class="mb-3" id="firmaField" style="display:none;">
                         <label class="form-label">Firma (imagen):</label>
                         <input type="file" name="firma" class="form-control" accept="image/*">
                         <div class="form-text">Solo para directivos.</div>
+                    </div>
+                    <!-- Campo para tipo de compras -->
+                    <div class="mb-3" id="tipoComprasField">
+                        <label class="form-label">Tipo de Compras:</label>
+                        <select name="tipo_compras" class="form-select">
+                            <option value="servicios">Servicios</option>
+                            <option value="ferreteria">Ferretería</option>
+                            <option value="repuestos">Repuestos</option>
+                            <option value="suministros">Suministros</option>
+                            <option value="vacunas">Vacunas</option>
+                        </select>
+                    </div>
+                    <div class="mb-3" id="isMasterField">
+                        <label class="form-label">Usuario Master:</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="is_master" id="isMasterCreate">
+                            <label class="form-check-label" for="isMasterCreate">
+                                Puede ver y gestionar todas las órdenes y requisiciones
+                            </label>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -400,16 +295,181 @@
         </div>
     </div>
 </div>
+<!-- Modales de edición de usuarios compras -->
+{% for u in usuarios_com %}
+<div class="modal fade" id="editarUsuarioModal_com_{{ u.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="accion" value="editar">
+                <input type="hidden" name="tipo" value="com">
+                <input type="hidden" name="user_id" value="{{ u.id }}">
+                <div class="modal-header">
+                    <h5 class="modal-title">Editar Usuario Compras</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Nombre:</label>
+                        <input type="text" name="nombre" class="form-control" value="{{ u.nombre }}" required>
+                    </div>
+                    <div class="mb-3" id="tipoComprasField_edit_{{ u.id }}">
+                        <label class="form-label">Tipo de Compras:</label>
+                        <select name="tipo_compras" class="form-select" {% if u.is_master %}disabled{% endif %}>
+                            <option value="servicios" {% if u.tipo_compras == 'servicios' %}selected{% endif %}>Servicios</option>
+                            <option value="ferreteria" {% if u.tipo_compras == 'ferreteria' %}selected{% endif %}>Ferretería</option>
+                            <option value="repuestos" {% if u.tipo_compras == 'repuestos' %}selected{% endif %}>Repuestos</option>
+                            <option value="suministros" {% if u.tipo_compras == 'suministros' %}selected{% endif %}>Suministros</option>
+                            <option value="vacunas" {% if u.tipo_compras == 'vacunas' %}selected{% endif %}>Vacunas</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Usuario Master:</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="is_master" id="isMaster_{{ u.id }}" {% if u.is_master %}checked{% endif %}>
+                            <label class="form-check-label" for="isMaster_{{ u.id }}">
+                                Puede ver y gestionar todas las órdenes y requisiciones
+                            </label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Nueva Contraseña (opcional):</label>
+                        <input type="password" name="password" class="form-control">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+<!-- Modales de edición de usuarios requisitor -->
+{% for u in usuarios_req %}
+<div class="modal fade" id="editarUsuarioModal_req_{{ u.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="accion" value="editar">
+                <input type="hidden" name="tipo" value="req">
+                <input type="hidden" name="user_id" value="{{ u.id }}">
+                <div class="modal-header">
+                    <h5 class="modal-title">Editar Usuario Requisitor</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Nombre:</label>
+                        <input type="text" name="nombre" class="form-control" value="{{ u.nombre }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Nueva Contraseña (opcional):</label>
+                        <input type="password" name="password" class="form-control">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+<!-- Modales de edición de usuarios directivo -->
+{% for u in usuarios_dir %}
+<div class="modal fade" id="editarUsuarioModal_dir_{{ u.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <input type="hidden" name="accion" value="editar">
+                <input type="hidden" name="tipo" value="dir">
+                <input type="hidden" name="user_id" value="{{ u.id }}">
+                <div class="modal-header">
+                    <h5 class="modal-title">Editar Usuario Directivo</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Nombre:</label>
+                        <input type="text" name="nombre" class="form-control" value="{{ u.nombre }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Nueva Contraseña (opcional):</label>
+                        <input type="password" name="password" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Firma (imagen):</label>
+                        <input type="file" name="firma" class="form-control" accept="image/*">
+                        <div class="form-text">Opcional. Solo para directivos.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Usuario Master:</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="is_master" id="isMaster_{{ u.id }}" {% if u.is_master %}checked{% endif %}>
+                            <label class="form-check-label" for="isMaster_{{ u.id }}">
+                                Puede ver y gestionar todas las órdenes y requisiciones
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+<!-- Modales de edición de usuarios admin -->
+{% for u in usuarios_admin %}
+<div class="modal fade" id="editarUsuarioModal_admin_{{ u.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="accion" value="editar">
+                <input type="hidden" name="tipo" value="admin">
+                <input type="hidden" name="user_id" value="{{ u.id }}">
+                <div class="modal-header">
+                    <h5 class="modal-title">Editar Usuario Admin</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Nombre:</label>
+                        <input type="text" name="nombre" class="form-control" value="{{ u.nombre }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Nueva Contraseña (opcional):</label>
+                        <input type="password" name="password" class="form-control">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar Cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const tipoSelect = document.getElementById('tipoUsuarioSelect');
-    const firmaField = document.getElementById('firmaField');
+    const tipoComprasField = document.getElementById('tipoComprasField');
     tipoSelect.addEventListener('change', function() {
-        if (this.value === 'dir') {
-            firmaField.style.display = 'block';
+        if (this.value === 'com') {
+            tipoComprasField.style.display = 'block';
         } else {
-            firmaField.style.display = 'none';
+            tipoComprasField.style.display = 'none';
         }
     });
 });

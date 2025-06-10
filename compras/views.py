@@ -41,8 +41,10 @@ def compras_requisiciones(request):
                 return redirect('compras_requisiciones')
         return redirect('compras_requisiciones')
     
-    # Solo mostrar las requisiciones asignadas al usuario de compras logueado
-    requisiciones = Requisicion.objects.filter(usuario=user).order_by('-fecha_registro')
+    if user.is_master:
+        requisiciones = Requisicion.objects.all()
+    else:
+        requisiciones = Requisicion.objects.filter(usuario=user)
 
     buscar = request.GET.get('buscar', '').strip()
     estado = request.GET.get('estado', '').strip()
@@ -103,7 +105,13 @@ def compras_ordenes(request):
         
         return redirect('compras_ordenes')
     
-    ordenes_compra = OrdenCompra.objects.all().order_by('-fecha_creacion')
+    # Ejemplo para mostrar todas las órdenes y requisiciones si es master
+    if user.is_master:
+        ordenes_compra = OrdenCompra.objects.all()
+        requisiciones = Requisicion.objects.all()
+    else:
+        ordenes_compra = OrdenCompra.objects.filter(requisicion__usuario=user)
+        requisiciones = Requisicion.objects.filter(usuario=user)
 
     buscar = request.GET.get('buscar', '').strip()
     estado = request.GET.get('estado', '').strip()
@@ -116,7 +124,7 @@ def compras_ordenes(request):
     return render(request, 'ordenes.html', {
         'user': user,
         'ordenes_compra': ordenes_compra,
-        'requisiciones': Requisicion.objects.all().order_by('-fecha_registro'),
+        'requisiciones': requisiciones,
         'proveedores': proveedores,  # Pasar proveedores al template
         'estados_orden': OrdenCompra.ESTADOS,
         'fecha_minima': datetime.now().strftime('%Y-%m-%d')

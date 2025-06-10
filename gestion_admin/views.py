@@ -102,6 +102,14 @@ def gestion_usuarios(request):
                 messages.error(request, 'El usuario ya existe')
             else:
                 obj = Modelo(nombre=nombre)
+                # Guardar correo electrónico
+                email = request.POST.get('email')
+                obj.email = email
+                # Guardar tipo de compras si es usuario de compras
+                if tipo == 'com':
+                    tipo_compras = request.POST.get('tipo_compras', 'servicios')
+                    obj.tipo_compras = tipo_compras
+                    obj.is_master = request.POST.get('is_master') == 'on'
                 # Guardar firma si es directivo
                 if tipo == 'dir' and firma:
                     obj.firma = firma
@@ -116,12 +124,21 @@ def gestion_usuarios(request):
             try:
                 obj = Modelo.objects.get(id=user_id)
                 obj.nombre = nombre
+                # Actualizar correo electrónico
+                email = request.POST.get('email')
+                obj.email = email
+                # Actualizar tipo de compras si es usuario de compras
+                if tipo == 'com':
+                    tipo_compras = request.POST.get('tipo_compras', 'servicios')
+                    obj.tipo_compras = tipo_compras
+                    obj.is_master = request.POST.get('is_master') == 'on'
                 # Actualizar firma si es directivo y se sube nueva
                 if tipo == 'dir' and firma:
                     obj.firma = firma
                 # Actualizar contraseña encriptada si se proporciona
                 if password:
                     obj.password = make_password(password)
+                obj.bloqueado = 1 if request.POST.get('bloqueado') == 'on' else 0
                 obj.save()
                 messages.success(request, 'Usuario actualizado')
             except Modelo.DoesNotExist:

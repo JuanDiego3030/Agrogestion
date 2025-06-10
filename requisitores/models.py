@@ -7,6 +7,7 @@ class User_req(models.Model):
     nombre = models.CharField(max_length=100, unique=True)
     password = models.CharField(max_length=128)
     bloqueado = models.BooleanField(default=False)
+    email = models.EmailField(max_length=150, unique=True, null=True, blank=True)  # Nuevo campo
 
     def __str__(self):
         return self.nombre

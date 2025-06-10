@@ -5,9 +5,23 @@ from django.db.models.signals import pre_delete
 from directivos.models import User_dir
 
 class User_com(models.Model):
+    TIPO_COMPRAS_CHOICES = [
+        ('servicios', 'Servicios'),
+        ('ferreteria', 'Ferretería'),
+        ('repuestos', 'Repuestos'),
+        ('suministros', 'Suministros'),
+        ('vacunas', 'Vacunas'),
+    ]
     nombre = models.CharField(max_length=100, unique=True)
     password = models.CharField(max_length=128)
+    is_master = models.BooleanField(default=False)
     bloqueado = models.BooleanField(default=False)
+    tipo_compras = models.CharField(
+        max_length=20,
+        choices=TIPO_COMPRAS_CHOICES,
+        default='servicios'
+    )
+    email = models.EmailField(max_length=150, unique=True, null=True, blank=True)  # Nuevo campo
 
     def __str__(self):
         return self.nombre

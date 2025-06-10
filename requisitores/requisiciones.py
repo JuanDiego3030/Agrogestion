@@ -3,6 +3,8 @@ from django.core.exceptions import ValidationError
 from django.contrib import messages
 from django.db import transaction
 from django.core.files.storage import default_storage
+from django.core.mail import send_mail
+from django.conf import settings
 
 class RequisicionService:
     @staticmethod
@@ -39,6 +41,27 @@ class RequisicionService:
                 directivo=directivo,
             )
             req.save()
+
+            # Enviar correo al comprador asignado
+            try:
+                send_mail(
+                    subject=f'Nueva Requisición Asignada: {codigo}',
+                    message=(
+                        f'Hola {usuario_com.nombre},\n\n'
+                        f'Se te ha asignado una nueva requisición.\n'
+                        f'Código: {codigo}\n'
+                        f'Descripción: {descripcion}\n'
+                        f'Fecha requerida: {fecha_requerida}\n'
+                        f'Importancia: {importancia}\n'
+                        f'\nPor favor, ingresa al sistema para gestionarla.'
+                    ),
+                    from_email=settings.EMAIL_HOST_USER,
+                    recipient_list=[usuario_com.email],
+                    fail_silently=False,
+                )
+            except Exception as e:
+                messages.warning(request, f'La requisición fue creada pero no se pudo enviar el correo: {e}')
+
             messages.success(request, f'Requisición {codigo} creada exitosamente')
             return True
 
