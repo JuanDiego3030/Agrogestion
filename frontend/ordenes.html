@@ -50,18 +50,21 @@
 
             <!-- Barra de búsqueda y filtro por estado -->
 <form method="get" class="row g-2 mb-3 align-items-end">
-    <div class="col-md-4">
+    <div class="col-md-3">
         <label class="form-label mb-0">Buscar por número:</label>
         <input type="text" name="buscar" value="{{ request.GET.buscar }}" class="form-control" placeholder="Ej: OC-2023-001 o REQ-2023-001">
     </div>
+    <div class="col-md-2">
+        <label class="form-label mb-0">Fecha desde:</label>
+        <input type="date" name="fecha_desde" value="{{ request.GET.fecha_desde }}" class="form-control">
+    </div>
+    <div class="col-md-2">
+        <label class="form-label mb-0">Fecha hasta:</label>
+        <input type="date" name="fecha_hasta" value="{{ request.GET.fecha_hasta }}" class="form-control">
+    </div>
     <div class="col-md-3">
-        <label class="form-label mb-0">Filtrar por estado:</label>
-        <select name="estado" class="form-select">
-            <option value="">Todos</option>
-            <option value="P" {% if request.GET.estado == "P" %}selected{% endif %}>Pendiente</option>
-            <option value="A" {% if request.GET.estado == "A" %}selected{% endif %}>Aprobada</option>
-            <option value="N" {% if request.GET.estado == "N" %}selected{% endif %}>Negada</option>
-        </select>
+        <label class="form-label mb-0">Proveedor:</label>
+        <input type="text" name="proveedor" value="{{ request.GET.proveedor }}" class="form-control" placeholder="Nombre o código">
     </div>
     <div class="col-md-2">
         <button type="submit" class="btn btn-outline-primary w-100">

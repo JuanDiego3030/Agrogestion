@@ -53,11 +53,17 @@ def directivos_requisiciones(request):
 
     buscar = request.GET.get('buscar', '').strip()
     estado = request.GET.get('estado', '').strip()
+    fecha_desde = request.GET.get('fecha_desde')
+    fecha_hasta = request.GET.get('fecha_hasta')
 
     if buscar:
         requisiciones = requisiciones.filter(codigo__icontains=buscar)
     if estado:
         requisiciones = requisiciones.filter(estado=estado)
+    if fecha_desde:
+        requisiciones = requisiciones.filter(fecha_registro__date__gte=fecha_desde)
+    if fecha_hasta:
+        requisiciones = requisiciones.filter(fecha_registro__date__lte=fecha_hasta)
 
     return render(request, 'directivos_requisiciones.html', {
         'user': user,

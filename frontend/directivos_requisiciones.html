@@ -47,26 +47,34 @@
 
             <!-- Barra de búsqueda y filtro por estado -->
             <form method="get" class="row g-2 mb-3 align-items-end">
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <label class="form-label mb-0">Buscar por número:</label>
                     <input type="text" name="buscar" value="{{ request.GET.buscar }}" class="form-control" placeholder="Ej: REQ-2023-001">
                 </div>
-                <div class="col-md-3">
-                    <label class="form-label mb-0">Filtrar por estado:</label>
-                    <select name="estado" class="form-select">
-                        <option value="">Todos</option>
-                        <option value="P" {% if request.GET.estado == "P" %}selected{% endif %}>Pendiente</option>
-                        <option value="A" {% if request.GET.estado == "A" %}selected{% endif %}>Aprobada</option>
-                        <option value="N" {% if request.GET.estado == "N" %}selected{% endif %}>Negada</option>
-                    </select>
+                <div class="col-md-2">
+                    <label class="form-label mb-0">Fecha desde:</label>
+                    <input type="date" name="fecha_desde" value="{{ request.GET.fecha_desde }}" class="form-control">
                 </div>
                 <div class="col-md-2">
-                    <button type="submit" class="btn btn-outline-primary w-100">
+                    <label class="form-label mb-0">Fecha hasta:</label>
+                    <input type="date" name="fecha_hasta" value="{{ request.GET.fecha_hasta }}" class="form-control">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label mb-0">Estado:</label>
+                    <select name="estado" class="form-select">
+                        <option value="">Todos</option>
+                        <option value="P" {% if request.GET.estado == 'P' %}selected{% endif %}>Pendiente</option>
+                        <option value="A" {% if request.GET.estado == 'A' %}selected{% endif %}>Aprobada</option>
+                        <option value="R" {% if request.GET.estado == 'R' %}selected{% endif %}>Rechazada</option>
+                    </select>
+                </div>
+                <div class="col-md-1 d-grid">
+                    <button type="submit" class="btn btn-outline-primary">
                         <i class="fas fa-search"></i> Buscar
                     </button>
                 </div>
-                <div class="col-md-2">
-                    <a href="?" class="btn btn-outline-secondary w-100">
+                <div class="col-md-2 d-grid">
+                    <a href="?" class="btn btn-outline-secondary">
                         <i class="fas fa-eraser"></i> Limpiar
                     </a>
                 </div>

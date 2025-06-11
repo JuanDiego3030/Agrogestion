@@ -47,12 +47,20 @@ def compras_requisiciones(request):
         requisiciones = Requisicion.objects.filter(usuario=user)
 
     buscar = request.GET.get('buscar', '').strip()
+    fecha_desde = request.GET.get('fecha_desde')
+    fecha_hasta = request.GET.get('fecha_hasta')
     estado = request.GET.get('estado', '').strip()
+
+    requisiciones = Requisicion.objects.all()
 
     if buscar:
         requisiciones = requisiciones.filter(codigo__icontains=buscar)
+    if fecha_desde:
+        requisiciones = requisiciones.filter(fecha_registro__date__gte=fecha_desde)
+    if fecha_hasta:
+        requisiciones = requisiciones.filter(fecha_registro__date__lte=fecha_hasta)
     if estado:
-        requisiciones = requisiciones.filter(estado=estado)
+       requisiciones = requisiciones.filter(estado=estado)
 
     return render(request, 'requisiciones.html', {
         'user': user,
@@ -115,11 +123,20 @@ def compras_ordenes(request):
 
     buscar = request.GET.get('buscar', '').strip()
     estado = request.GET.get('estado', '').strip()
+    fecha_desde = request.GET.get('fecha_desde')
+    fecha_hasta = request.GET.get('fecha_hasta')
+    proveedor = request.GET.get('proveedor', '').strip()
 
     if buscar:
         ordenes_compra = ordenes_compra.filter(codigo__icontains=buscar)
     if estado:
         ordenes_compra = ordenes_compra.filter(estado=estado)
+    if fecha_desde:
+        ordenes_compra = ordenes_compra.filter(fecha_creacion__date__gte=fecha_desde)
+    if fecha_hasta:
+        ordenes_compra = ordenes_compra.filter(fecha_creacion__date__lte=fecha_hasta)
+    if proveedor:
+        ordenes_compra = ordenes_compra.filter(proveedor__icontains=proveedor)
 
     return render(request, 'ordenes.html', {
         'user': user,

@@ -105,13 +105,20 @@ def requisitores_requisiciones(request):
             RequisicionService.eliminar_requisicion(request, user)
             return redirect('requisitores_requisiciones')
 
-    requisiciones = Requisicion.objects.filter(creador_req=user.nombre).order_by('-fecha_registro')
-
     buscar = request.GET.get('buscar', '').strip()
+    fecha_desde = request.GET.get('fecha_desde')
+    fecha_hasta = request.GET.get('fecha_hasta')
     estado = request.GET.get('estado', '').strip()
+
+    # Solo requisiciones creadas por el usuario actual
+    requisiciones = Requisicion.objects.filter(creador_req=user.nombre)
 
     if buscar:
         requisiciones = requisiciones.filter(codigo__icontains=buscar)
+    if fecha_desde:
+        requisiciones = requisiciones.filter(fecha_registro__date__gte=fecha_desde)
+    if fecha_hasta:
+        requisiciones = requisiciones.filter(fecha_registro__date__lte=fecha_hasta)
     if estado:
         requisiciones = requisiciones.filter(estado=estado)
 
