@@ -12,6 +12,12 @@ from datetime import datetime
 from django.urls import reverse
 from django.http import FileResponse, HttpResponse
 from django.conf import settings
+import os
+import tempfile
+import shutil
+import zipfile
+from django.http import FileResponse, HttpResponseBadRequest
+from django.utils.text import slugify
 
 
 @never_cache
@@ -196,3 +202,54 @@ def ver_pdf(request, doc_type, doc_id):
 def logout(request):
     request.session.flush()  # Eliminar todas las sesiones
     return redirect('index')  # Redirigir a la página de inicio
+
+def exportar_archivos(request):
+    if request.method == 'POST':
+        fecha_desde = request.POST.get('fecha_desde')
+        fecha_hasta = request.POST.get('fecha_hasta')
+        if not fecha_desde or not fecha_hasta:
+            return HttpResponseBadRequest("Debe seleccionar ambas fechas.")
+
+        # Filtrar órdenes y requisiciones por fecha
+        ordenes = OrdenCompra.objects.filter(fecha_creacion__date__gte=fecha_desde, fecha_creacion__date__lte=fecha_hasta)
+        requisiciones = Requisicion.objects.filter(fecha_registro__date__gte=fecha_desde, fecha_registro__date__lte=fecha_hasta)
+
+        # Crear carpeta temporal
+        temp_dir = tempfile.mkdtemp()
+        try:
+            # Guardar archivos de órdenes
+            for orden in ordenes:
+                carpeta = os.path.join(temp_dir, f"OC_{slugify(orden.codigo)}_{orden.fecha_creacion.strftime('%Y%m%d')}")
+                os.makedirs(carpeta, exist_ok=True)
+                if orden.archivo:
+                    shutil.copy(orden.archivo.path, os.path.join(carpeta, os.path.basename(orden.archivo.name)))
+                if hasattr(orden, 'archivo_aprobacion') and orden.archivo_aprobacion:
+                    shutil.copy(orden.archivo_aprobacion.path, os.path.join(carpeta, os.path.basename(orden.archivo_aprobacion.name)))
+                if hasattr(orden, 'archivo_cuadro_comparativo') and orden.archivo_cuadro_comparativo:
+                    shutil.copy(orden.archivo_cuadro_comparativo.path, os.path.join(carpeta, os.path.basename(orden.archivo_cuadro_comparativo.name)))
+            # Guardar archivos de requisiciones
+            for req in requisiciones:
+                carpeta = os.path.join(temp_dir, f"REQ_{slugify(req.codigo)}_{req.fecha_registro.strftime('%Y%m%d')}")
+                os.makedirs(carpeta, exist_ok=True)
+                if req.archivo:
+                    shutil.copy(req.archivo.path, os.path.join(carpeta, os.path.basename(req.archivo.name)))
+                if hasattr(req, 'archivo_aprobacion') and req.archivo_aprobacion:
+                    shutil.copy(req.archivo_aprobacion.path, os.path.join(carpeta, os.path.basename(req.archivo_aprobacion.name)))
+
+            # Crear archivo .zip
+            zip_path = os.path.join(temp_dir, f"exportacion_{fecha_desde}_a_{fecha_hasta}.zip")
+            with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                for root, dirs, files in os.walk(temp_dir):
+                    for file in files:
+                        if file.endswith('.zip'):
+                            continue
+                        file_path = os.path.join(root, file)
+                        arcname = os.path.relpath(file_path, temp_dir)
+                        zipf.write(file_path, arcname)
+            # Descargar el .zip
+            response = FileResponse(open(zip_path, 'rb'), as_attachment=True, filename=os.path.basename(zip_path))
+            return response
+        finally:
+            shutil.rmtree(temp_dir)
+    else:
+        return HttpResponseBadRequest("Método no permitido.")

@@ -43,7 +43,7 @@ def requisitores_requisiciones(request):
     except User_req.DoesNotExist:
         return redirect('requisitores_login')
 
-    # --- CRUD ---
+
     if request.method == 'POST':
         accion = request.POST.get('accion')
         if accion == 'crear':
