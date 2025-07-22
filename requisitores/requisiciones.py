@@ -5,6 +5,8 @@ from django.db import transaction
 from django.core.files.storage import default_storage
 from django.core.mail import send_mail
 from django.conf import settings
+from requisitores.telegram_utils import send_telegram_message
+import asyncio
 
 class RequisicionService:
     @staticmethod
@@ -34,13 +36,22 @@ class RequisicionService:
                 codigo=codigo,
                 fecha_requerida=fecha_requerida,
                 descripcion=descripcion,
-                usuario=usuario_com,           # Usuario de compras asignado
-                creador_req=user.nombre,       # Nombre del requisitor
+                usuario=usuario_com,
+                creador_req=user.nombre,
                 archivo=archivo,
                 importancia=importancia,
                 directivo=directivo,
             )
             req.save()
+
+            # Notificación por Telegram usando asyncio.run
+            try:
+                asyncio.run(send_telegram_message(
+                    chat_id='@agrolucha',
+                    message=f'Nueva requisición registrada:\nCódigo: {codigo}\nDescripción: {descripcion}\nFecha requerida: {fecha_requerida}\nImportancia: {importancia}'
+                ))
+            except Exception as e:
+                messages.warning(request, f'No se pudo enviar la notificación de Telegram: {e}')
 
             # Enviar correo al comprador asignado
             try:

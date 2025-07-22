@@ -46,7 +46,7 @@ def compras_requisiciones(request):
             if RequisicionService.eliminar_requisicion(request, user):
                 return redirect('compras_requisiciones')
         return redirect('compras_requisiciones')
-    
+
     if user.is_master:
         requisiciones = Requisicion.objects.all()
     else:

@@ -8,6 +8,8 @@ from django.contrib.auth.hashers import check_password
 from directivos.models import User_dir
 from django.core.mail import send_mail
 from django.conf import settings
+from requisitores.telegram_utils import send_telegram_message
+import asyncio
 
 def requisitores_login(request):
     if request.method == 'POST':
@@ -43,7 +45,6 @@ def requisitores_requisiciones(request):
     except User_req.DoesNotExist:
         return redirect('requisitores_login')
 
-
     if request.method == 'POST':
         accion = request.POST.get('accion')
         if accion == 'crear':
@@ -55,6 +56,16 @@ def requisitores_requisiciones(request):
                 fecha_requerida = request.POST.get('fecha_requerida')
                 importancia = request.POST.get('importancia', 'N')
                 directivo_id = request.POST.get('directivo_id')
+
+                # Enviar notificación por Telegram aquí
+                try:
+                    asyncio.run(send_telegram_message(
+                        chat_id='@agrolucha',
+                        message=f'Nueva requisición registrada:\nCódigo: {codigo}\nDescripción: {descripcion}\nFecha requerida: {fecha_requerida}\nImportancia: {importancia}'
+                    ))
+                except Exception as e:
+                    messages.warning(request, f'No se pudo enviar la notificación de Telegram: {e}')
+
                 try:
                     usuario_com = User_com.objects.get(id=usuario_com_id)
                     if usuario_com.email:
@@ -73,7 +84,6 @@ def requisitores_requisiciones(request):
                             recipient_list=[usuario_com.email],
                             fail_silently=False,
                         )
-                    # Enviar correo al directivo si existe y tiene email
                     if directivo_id:
                         try:
                             directivo = User_dir.objects.get(id=directivo_id)

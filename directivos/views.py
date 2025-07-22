@@ -12,6 +12,7 @@ from reportlab.lib.units import cm
 from django.core.files.base import ContentFile
 import io
 import os
+from datetime import datetime
 
 def directivos_login(request):
     if request.method == 'POST':
@@ -79,47 +80,46 @@ def firmar_requisicion(request, req_id):
     req = get_object_or_404(Requisicion, id=req_id)
     user = get_object_or_404(User_dir, id=user_id)
     if req.estado == 'P':
-        # Ruta del PDF original
         pdf_path = req.archivo.path
-        # Ruta de la firma
         firma_path = user.firma.path if user.firma else None
 
         if not firma_path or not os.path.exists(firma_path):
             messages.error(request, 'No se encontró la firma del directivo.')
             return redirect('directivos_requisiciones')
 
-        # Leer el PDF original
         pdf_reader = PdfReader(pdf_path)
         pdf_writer = PdfWriter()
 
-        # Crear un PDF temporal con la firma usando reportlab
         packet = io.BytesIO()
         can = canvas.Canvas(packet, pagesize=letter)
-        # Dimensiones de la firma en puntos (1 cm = 28.35 pt)
         firma_width = 3 * cm
         firma_height = 1.5 * cm
-        # Posición: centrado en la parte inferior
         page_width, page_height = letter
         x = (page_width - firma_width) / 2.5
-        y = 2.7 * cm  # 2.7 cm desde abajo
+        y = 2.7 * cm
+
+        # Dibuja la imagen de la firma
         can.drawImage(firma_path, x, y, width=firma_width, height=firma_height, mask='auto')
+
+        # Dibuja la fecha y hora de la firma debajo de la imagen
+        fecha_firma = datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+        can.setFont("Helvetica", 10)
+        can.drawString(x, y - 15, fecha_firma)
+
         can.save()
         packet.seek(0)
         firma_pdf = PdfReader(packet)
 
-        # Fusionar la firma en la última página del PDF original
         for i in range(len(pdf_reader.pages)):
             page = pdf_reader.pages[i]
             if i == len(pdf_reader.pages) - 1:
                 page.merge_page(firma_pdf.pages[0])
             pdf_writer.add_page(page)
 
-        # Guardar el PDF firmado en memoria
         output_stream = io.BytesIO()
         pdf_writer.write(output_stream)
         output_stream.seek(0)
 
-        # Sobrescribir el archivo original o guardar como archivo de aprobación
         req.archivo_aprobacion.save(
             f"aprobacion_{req.codigo}.pdf",
             ContentFile(output_stream.read())
